@@ -25,6 +25,25 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'changez-moi-en-local')
 
 from helpers import MOIS_FR, MOIS_FR_ABBR, mois_nom, periode_label, month_in_range, plants_for_month, PLANT_TYPES, unique_filename
+from services.images import save_tip_image, thumb_name, is_managed_image
+
+
+def _tip_thumb(image):
+    """Miniature si gérée et présente sur disque, sinon l'image elle-même."""
+    if is_managed_image(image):
+        t = thumb_name(image)
+        if os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], 'img', t)):
+            return t
+    return image
+
+
+def _delete_managed_image(filename):
+    """Supprime version page + miniature (fichiers gérés uniquement)."""
+    if is_managed_image(filename):
+        for f in (filename, thumb_name(filename)):
+            p = os.path.join(app.config['UPLOAD_FOLDER'], 'img', f)
+            if os.path.exists(p):
+                os.remove(p)
 
 @app.context_processor
 def inject_helpers():
@@ -249,22 +268,25 @@ def plant_details(plant_id):
 def tips():
     db = get_db()
     try:
-        tips_list = db.execute('''SELECT t.*, c.name as category_name FROM tips t
-                                  LEFT JOIN tip_categories c ON t.category_id = c.id''').fetchall()
+        rows = db.execute('''SELECT t.*, c.name as category_name FROM tips t
+                             LEFT JOIN tip_categories c ON t.category_id = c.id''').fetchall()
     except sqlite3.OperationalError:
-        tips_list = db.execute('SELECT *, NULL as category_name FROM tips').fetchall()
+        rows = db.execute('SELECT *, NULL as category_name FROM tips').fetchall()
+    tips_list = [dict(t, thumb=_tip_thumb(t['image'])) for t in rows]
     return render_template('tips.html', tips=tips_list)
 
 @app.route('/tip/<int:tip_id>')
 def tip_details(tip_id):
     db = get_db()
     try:
-        tip = db.execute('''SELECT t.*, c.name as category_name FROM tips t
+        row = db.execute('''SELECT t.*, c.name as category_name FROM tips t
                             LEFT JOIN tip_categories c ON t.category_id = c.id
                             WHERE t.id = ?''', (tip_id,)).fetchone()
     except sqlite3.OperationalError:
-        tip = db.execute('SELECT *, NULL as category_name FROM tips WHERE id = ?', (tip_id,)).fetchone()
-    if not tip: return "Conseil introuvable", 404
+        row = db.execute('SELECT *, NULL as category_name FROM tips WHERE id = ?', (tip_id,)).fetchone()
+    if not row: return "Conseil introuvable", 404
+    tip = dict(row)
+    tip['thumb'] = _tip_thumb(tip['image'])
     return render_template('tip_detail.html', tip=tip)
 
 # --- ROUTES PRIVÉES (Récoltes, Stats, Ma Plante) ---
@@ -667,34 +689,137 @@ def admin_delete_plant(plant_id):
     return redirect(url_for('admin_plants'))
 
 # --- GESTION CONSEILS (Tips) ---
+def _tip_categories(db):
+    try:
+        return db.execute('SELECT * FROM tip_categories ORDER BY name').fetchall()
+    except sqlite3.OperationalError:
+        return []
+
 @app.route('/admin/tips', methods=['GET', 'POST'])
 @login_required
 def admin_tips():
     if session.get('role') != 'admin': return redirect(url_for('index'))
     db = get_db()
-    
+
     if request.method == 'POST':
-        title = request.form['title']
-        content = request.form['content']
+        title = request.form['title'].strip()
+        content = request.form['content'].strip()
+        cat_raw = request.form.get('category_id', '')
+        category_id = int(cat_raw) if cat_raw.isdigit() else None
         image_filename = 'default_tip.jpg'
-        
+
         if 'image' in request.files:
             file = request.files['image']
-            if file and file.filename != '' and allowed_file(file.filename):
-                image_filename = secure_filename(file.filename)
+            if file and file.filename != '':
+                page, error = save_tip_image(file, os.path.join(app.config['UPLOAD_FOLDER'], 'img'))
+                if error:
+                    flash(error)
+                    return redirect(url_for('admin_tips'))
+                image_filename = page
 
-
-                # On utilise le bon chemin UPLOAD_FOLDER qui pointe vers static
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'img', image_filename))
-
-        
-        db.execute('INSERT INTO tips (title, content, image) VALUES (?,?,?)', (title, content, image_filename))
+        try:
+            db.execute('INSERT INTO tips (title, content, image, category_id) VALUES (?,?,?,?)',
+                       (title, content, image_filename, category_id))
+        except sqlite3.OperationalError:
+            db.execute('INSERT INTO tips (title, content, image) VALUES (?,?,?)',
+                       (title, content, image_filename))
         db.commit()
         flash('Conseil ajouté.')
         return redirect(url_for('admin_tips'))
 
-    tips = db.execute('SELECT * FROM tips').fetchall()
-    return render_template('admin/tips.html', tips=tips)
+    try:
+        tips = db.execute('''SELECT t.*, c.name as category_name FROM tips t
+                             LEFT JOIN tip_categories c ON t.category_id = c.id
+                             ORDER BY t.id DESC''').fetchall()
+    except sqlite3.OperationalError:
+        tips = db.execute('SELECT *, NULL as category_name FROM tips ORDER BY id DESC').fetchall()
+    tips = [dict(t, thumb=_tip_thumb(t['image'])) for t in tips]
+    return render_template('admin/tips.html', tips=tips, categories=_tip_categories(db))
+
+@app.route('/admin/tips/edit/<int:tip_id>', methods=['GET', 'POST'])
+@login_required
+def admin_edit_tip(tip_id):
+    if session.get('role') != 'admin': return redirect(url_for('index'))
+    db = get_db()
+    tip = db.execute('SELECT * FROM tips WHERE id = ?', (tip_id,)).fetchone()
+    if tip is None:
+        flash("Conseil introuvable.")
+        return redirect(url_for('admin_tips'))
+
+    if request.method == 'POST':
+        title = request.form['title'].strip()
+        content = request.form['content'].strip()
+        cat_raw = request.form.get('category_id', '')
+        category_id = int(cat_raw) if cat_raw.isdigit() else None
+        image_filename = tip['image']
+
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename != '':
+                page, error = save_tip_image(file, os.path.join(app.config['UPLOAD_FOLDER'], 'img'))
+                if error:
+                    flash(error)
+                    return redirect(url_for('admin_edit_tip', tip_id=tip_id))
+                _delete_managed_image(image_filename)
+                image_filename = page
+
+        try:
+            db.execute('UPDATE tips SET title=?, content=?, image=?, category_id=? WHERE id=?',
+                       (title, content, image_filename, category_id, tip_id))
+        except sqlite3.OperationalError:
+            db.execute('UPDATE tips SET title=?, content=?, image=? WHERE id=?',
+                       (title, content, image_filename, tip_id))
+        db.commit()
+        flash('Conseil modifié.')
+        return redirect(url_for('admin_tips'))
+
+    return render_template('admin/tip_form.html', tip=tip, categories=_tip_categories(db))
+
+@app.route('/admin/tip-categories', methods=['GET', 'POST'])
+@login_required
+def admin_tip_categories():
+    if session.get('role') != 'admin': return redirect(url_for('index'))
+    db = get_db()
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        if name:
+            try:
+                db.execute('INSERT INTO tip_categories (name) VALUES (?)', (name,))
+                db.commit()
+                flash('Catégorie créée.')
+            except sqlite3.IntegrityError:
+                flash('Cette catégorie existe déjà.')
+        return redirect(url_for('admin_tip_categories'))
+    return render_template('admin/tip_categories.html', categories=_tip_categories(db))
+
+@app.route('/admin/tip-categories/edit/<int:cat_id>', methods=['POST'])
+@login_required
+def admin_edit_tip_category(cat_id):
+    if session.get('role') != 'admin': return redirect(url_for('index'))
+    db = get_db()
+    name = request.form.get('name', '').strip()
+    if name:
+        try:
+            db.execute('UPDATE tip_categories SET name=? WHERE id=?', (name, cat_id))
+            db.commit()
+            flash('Catégorie renommée.')
+        except sqlite3.IntegrityError:
+            flash('Ce nom de catégorie existe déjà.')
+    return redirect(url_for('admin_tip_categories'))
+
+@app.route('/admin/tip-categories/delete/<int:cat_id>')
+@login_required
+def admin_delete_tip_category(cat_id):
+    if session.get('role') != 'admin': return redirect(url_for('index'))
+    db = get_db()
+    try:
+        db.execute('UPDATE tips SET category_id=NULL WHERE category_id=?', (cat_id,))
+    except sqlite3.OperationalError:
+        pass
+    db.execute('DELETE FROM tip_categories WHERE id=?', (cat_id,))
+    db.commit()
+    flash('Catégorie supprimée (les conseils sont conservés).')
+    return redirect(url_for('admin_tip_categories'))
 
 @app.route('/admin/tips/delete/<int:tip_id>')
 @login_required

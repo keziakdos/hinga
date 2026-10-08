@@ -17,7 +17,7 @@
             
 		<div class="h-48 overflow-hidden bg-gray-200 relative">
                 {% if tip.image and tip.image not in ['soil.jpg', 'water.jpg', 'mulch.jpg', 'rotation.jpg', 'bee.jpg', 'default_tip.jpg'] %}
-                     <img src="{{ url_for('static', filename='img/' + tip.image) }}" 
+                     <img src="{{ url_for('static', filename='img/' + tip.thumb) }}" 
                           alt="{{ tip.title }}" 
                           class="w-full h-full object-cover transform hover:scale-110 transition duration-500">
                 {% else %}

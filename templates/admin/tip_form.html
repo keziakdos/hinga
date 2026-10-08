@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-xl mx-auto pb-10">
+    <div class="glass p-8 rounded-3xl">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-green-900">Modifier le conseil</h1>
+            <a href="{{ url_for('admin_tips') }}" class="text-gray-600 underline text-sm">Annuler</a>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Titre</label>
+                <input type="text" name="title" value="{{ tip.title }}" required class="w-full p-2 rounded bg-white/50 border border-white/30">
+            </div>
+            {% if categories %}
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Catégorie</label>
+                <select name="category_id" class="w-full p-2 rounded bg-white/50 border border-white/30">
+                    <option value="">— Sans catégorie —</option>
+                    {% for c in categories %}
+                    <option value="{{ c.id }}" {% if tip.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Contenu</label>
+                <textarea name="content" rows="6" required class="w-full p-2 rounded bg-white/50 border border-white/30">{{ tip.content }}</textarea>
+            </div>
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Image</label>
+                {% if tip.image and tip.image != 'default_tip.jpg' %}
+                <div class="flex items-center gap-4 mt-2 p-2 bg-yellow-100/40 rounded-lg">
+                    <img src="{{ url_for('static', filename='img/' + tip.image) }}" alt="Image actuelle" class="w-24 h-24 object-cover rounded-lg shadow">
+                    <span class="text-sm text-gray-600">Image actuelle<br>Choisissez un fichier pour la remplacer.</span>
+                </div>
+                {% endif %}
+                <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif" class="w-full p-2 mt-2 bg-white/50 rounded">
+                <p class="text-xs text-gray-500 mt-1">JPG, PNG, WEBP, GIF — 10 Mo max. Redimensionnée automatiquement.</p>
+            </div>
+            <button type="submit" class="w-full bg-yellow-600 text-white py-3 rounded-xl font-bold">Enregistrer</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
