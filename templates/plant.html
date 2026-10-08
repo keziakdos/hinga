@@ -40,12 +40,12 @@
                 <div class="bg-green-100/60 p-4 rounded-2xl border border-green-200/50 flex flex-col items-center">
                     <i class="ph ph-seedling text-3xl text-green-600 mb-2"></i>
                     <span class="block text-xs text-green-800 uppercase font-bold mb-1">Semis</span>
-                    <span class="text-lg font-bold text-green-900">Mois {{ plant.sow_start }} - {{ plant.sow_end }}</span>
+                    <span class="text-lg font-bold text-green-900">{{ periode_label(plant.sow_start, plant.sow_end) }}</span>
                 </div>
                 <div class="bg-orange-100/60 p-4 rounded-2xl border border-orange-200/50 flex flex-col items-center">
                     <i class="ph ph-basket text-3xl text-orange-600 mb-2"></i>
                     <span class="block text-xs text-orange-800 uppercase font-bold mb-1">Récolte</span>
-                    <span class="text-lg font-bold text-orange-900">Mois {{ plant.harvest_start }} - {{ plant.harvest_end }}</span>
+                    <span class="text-lg font-bold text-orange-900">{{ periode_label(plant.harvest_start, plant.harvest_end) }}</span>
                 </div>
             </div>
         </div>

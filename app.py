@@ -225,7 +225,19 @@ def calendar():
     db = get_db()
     plants = db.execute('SELECT * FROM plants ORDER BY name').fetchall()
     months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
-    return render_template('calendar.html', plants=plants, months=months)
+    # Mois sélectionné (?mois=1..12) : deux listes semer / récolter
+    try:
+        selected_month = int(request.args.get('mois', 0))
+    except (TypeError, ValueError):
+        selected_month = 0
+    if not 1 <= selected_month <= 12:
+        selected_month = 0
+    a_semis, a_recolter = ([], [])
+    if selected_month:
+        a_semis, a_recolter = plants_for_month(plants, selected_month)
+    return render_template('calendar.html', plants=plants, months=months,
+                           selected_month=selected_month,
+                           a_semis=a_semis, a_recolter=a_recolter)
 
 @app.route('/plant/<int:plant_id>')
 def plant_details(plant_id):
@@ -236,13 +248,22 @@ def plant_details(plant_id):
 @app.route('/tips')
 def tips():
     db = get_db()
-    tips_list = db.execute('SELECT * FROM tips').fetchall()
+    try:
+        tips_list = db.execute('''SELECT t.*, c.name as category_name FROM tips t
+                                  LEFT JOIN tip_categories c ON t.category_id = c.id''').fetchall()
+    except sqlite3.OperationalError:
+        tips_list = db.execute('SELECT *, NULL as category_name FROM tips').fetchall()
     return render_template('tips.html', tips=tips_list)
 
 @app.route('/tip/<int:tip_id>')
 def tip_details(tip_id):
     db = get_db()
-    tip = db.execute('SELECT * FROM tips WHERE id = ?', (tip_id,)).fetchone()
+    try:
+        tip = db.execute('''SELECT t.*, c.name as category_name FROM tips t
+                            LEFT JOIN tip_categories c ON t.category_id = c.id
+                            WHERE t.id = ?''', (tip_id,)).fetchone()
+    except sqlite3.OperationalError:
+        tip = db.execute('SELECT *, NULL as category_name FROM tips WHERE id = ?', (tip_id,)).fetchone()
     if not tip: return "Conseil introuvable", 404
     return render_template('tip_detail.html', tip=tip)
 
