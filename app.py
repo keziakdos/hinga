@@ -26,6 +26,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'changez-moi-en-local')
 
 from helpers import MOIS_FR, MOIS_FR_ABBR, mois_nom, periode_label, month_in_range, plants_for_month, PLANT_TYPES, unique_filename
 from services.images import save_tip_image, thumb_name, is_managed_image
+from services.plant_analysis import is_analysis_enabled, analyze_image
 
 
 def _tip_thumb(image):
@@ -407,50 +408,25 @@ def maplante():
         file = request.files['file']
         if file.filename == '' or not allowed_file(file.filename): return redirect(request.url)
 
-        # Sauvegarde image
-        filename = secure_filename(f"user_{user_id}_{int(datetime.now().timestamp())}.jpg")
+        # Sauvegarde image (nom sûr et unique, extension d'origine)
+        filename = unique_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], 'img', filename)
         file.save(filepath)
-        
+
+        if not is_analysis_enabled():
+            # V1 : service non branché -> photo enregistrée en "attente d'analyse"
+            db.execute('''INSERT INTO monitored_plants
+                          (user_id, plant_name, image_path, diagnosis_summary, full_json, date_added)
+                          VALUES (?, ?, ?, ?, ?, ?)''',
+                       (user_id, 'Analyse en attente', filename,
+                        f"Photo enregistrée le {datetime.now().strftime('%Y-%m-%d')}, analyse automatique à configurer.",
+                        '{}', datetime.now().strftime('%Y-%m-%d')))
+            db.commit()
+            flash("📸 Photo enregistrée. L'analyse automatique sera configurée à la fin du projet.")
+            return redirect(url_for('maplante'))
+
         try:
-            base64_image = encode_image(filepath)
-
-            # --- LE NOUVEAU PROMPT PLUS COMPLET ---
-            prompt_text = """
-            Tu es un expert botaniste. Analyse cette image.
-            Réponds UNIQUEMENT au format JSON strict avec cette structure :
-            {
-                "name": "Nom commun (Nom latin)",
-                "confidence": "XX%",
-                "strengths": ["Point fort 1", "Point fort 2"],
-                "weaknesses": ["Maladie ou problème 1", "Problème 2"],
-                "advice": "Conseil principal pour le soin.",
-                "details": {
-                    "sun": "Exposition idéale (ex: Plein soleil)",
-                    "water": "Besoins en eau (ex: 2x par semaine)",
-                    "soil": "Type de sol idéal",
-                    "hardiness": "Résistance au froid/Climat"
-                }
-            }
-            Si ce n'est pas une plante, mets "Non identifié" dans le name. En Français.
-            """
-
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt_text},
-                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
-                        ]
-                    }
-                ],
-                response_format={"type": "json_object"},
-                max_tokens=700
-            )
-
-            ai_json = json.loads(response.choices[0].message.content)
+            ai_json = analyze_image(filepath)
 
             result = {
                 "image_filename": filename,
@@ -470,7 +446,8 @@ def maplante():
     # Récupérer l'historique
     monitored = db.execute('SELECT * FROM monitored_plants WHERE user_id = ? ORDER BY id DESC', (user_id,)).fetchall()
             
-    return render_template('maplante.html', result=result, monitored=monitored)
+    return render_template('maplante.html', result=result, monitored=monitored,
+                           analysis_enabled=is_analysis_enabled())
 
 
 
