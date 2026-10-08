@@ -1,5 +1,9 @@
 """Helpers partagés Hinga (V1 modulaire, prépare la V2)."""
 
+import os
+import uuid
+from werkzeug.utils import secure_filename
+
 MOIS_FR = [
     "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
     "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
@@ -75,3 +79,11 @@ def plants_for_month(plants, mois: int):
         if month_in_range(mois, har_start, har_end):
             a_recolter.append(p)
     return a_semis, a_recolter
+
+
+def unique_filename(original: str) -> str:
+    """Nom de fichier sûr et unique (garde l'extension, évite les collisions)."""
+    base = secure_filename(original or "image")
+    _, ext = os.path.splitext(base)
+    ext = ext.lower()[:6] or ".jpg"
+    return f"{uuid.uuid4().hex}{ext}"

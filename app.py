@@ -24,7 +24,7 @@ client = OpenAI()
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'changez-moi-en-local')
 
-from helpers import MOIS_FR, MOIS_FR_ABBR, mois_nom, periode_label, month_in_range, plants_for_month
+from helpers import MOIS_FR, MOIS_FR_ABBR, mois_nom, periode_label, month_in_range, plants_for_month, PLANT_TYPES, unique_filename
 
 @app.context_processor
 def inject_helpers():
@@ -42,7 +42,7 @@ app.config['DATABASE'] = os.path.join(basedir, 'hinga.db')
 
 
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -485,21 +485,63 @@ def admin_users():
     
     if request.method == 'POST':
         # Création d'un utilisateur
-        username = request.form['username']
+        username = request.form['username'].strip()
         password = request.form['password']
+        first_name = request.form.get('first_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        email = request.form.get('email', '').strip()
+        notes = request.form.get('notes', '').strip()
         # Vérif si existe déjà
         exist = db.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
         if exist:
             flash('Ce nom d\'utilisateur existe déjà.')
         else:
             pwd_hash = generate_password_hash(password)
-            db.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', (username, pwd_hash, 'user'))
+            db.execute('''INSERT INTO users (username, password, role, first_name, last_name, email, notes, is_active)
+                          VALUES (?, ?, 'user', ?, ?, ?, ?, 1)''',
+                       (username, pwd_hash, first_name, last_name, email, notes))
             db.commit()
             flash(f'Utilisateur {username} créé !')
         return redirect(url_for('admin_users'))
         
     users = db.execute('SELECT * FROM users').fetchall()
     return render_template('admin/users.html', users=users)
+
+@app.route('/admin/users/edit/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+def admin_edit_user(user_id):
+    if session.get('role') != 'admin': return redirect(url_for('index'))
+    db = get_db()
+    user = db.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+    if user is None:
+        flash("Utilisateur introuvable.")
+        return redirect(url_for('admin_users'))
+
+    if request.method == 'POST':
+        first_name = request.form.get('first_name', '').strip()
+        last_name = request.form.get('last_name', '').strip()
+        email = request.form.get('email', '').strip()
+        notes = request.form.get('notes', '').strip()
+        role = request.form.get('role', 'user')
+        if role not in ('admin', 'user'):
+            role = 'user'
+        # Impossible de désactiver son propre compte ou de se rétrograder
+        if user_id == session['user_id']:
+            is_active = 1
+            role = user['role']
+        else:
+            is_active = 1 if request.form.get('is_active') else 0
+        db.execute('''UPDATE users SET first_name=?, last_name=?, email=?, notes=?, role=?, is_active=?
+                      WHERE id=?''', (first_name, last_name, email, notes, role, is_active, user_id))
+        new_password = request.form.get('new_password', '')
+        if new_password:
+            db.execute('UPDATE users SET password=? WHERE id=?',
+                       (generate_password_hash(new_password), user_id))
+        db.commit()
+        flash('Utilisateur mis à jour.')
+        return redirect(url_for('admin_users'))
+
+    return render_template('admin/user_form.html', user=user)
 
 @app.route('/admin/users/delete/<int:user_id>')
 @login_required
@@ -564,17 +606,21 @@ def admin_edit_plant(plant_id=None):
         sec_diseases = request.form.get('section_diseases', '')
         sec_harvest = request.form.get('section_harvest', '')
 
-        # Gestion image (inchangée)
+        # Gestion image : nom sûr et unique, remplacement de l'ancienne
         image_filename = request.form.get('current_image')
         if 'image' in request.files:
             file = request.files['image']
             if file and file.filename != '' and allowed_file(file.filename):
-                image_filename = secure_filename(file.filename)
+                image_filename = unique_filename(file.filename)
                 # Utilisation du chemin absolu basedir défini plus haut
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], 'img', image_filename))
 
         if plant_id:
             # UPDATE AVEC LES NOUVEAUX CHAMPS
+            if not image_filename:
+                # Conserver l'image existante si aucune nouvelle image
+                row = db.execute('SELECT image FROM plants WHERE id = ?', (plant_id,)).fetchone()
+                image_filename = row['image'] if row and row['image'] else 'default.jpg'
             db.execute('''UPDATE plants SET name=?, type=?, sow_start=?, sow_end=?, harvest_start=?, harvest_end=?, 
                           details=?, conditions=?, roots=?, image=?,
                           section_sun=?, section_soil=?, section_water=?, section_sowing=?, section_diseases=?, section_harvest=?
@@ -598,7 +644,7 @@ def admin_edit_plant(plant_id=None):
     if plant_id:
         plant = db.execute('SELECT * FROM plants WHERE id = ?', (plant_id,)).fetchone()
     
-    return render_template('admin/plant_form.html', plant=plant)
+    return render_template('admin/plant_form.html', plant=plant, plant_types=PLANT_TYPES, mois=MOIS_FR)
 
 
 
