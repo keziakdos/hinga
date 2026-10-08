@@ -15,6 +15,9 @@
     <div class="text-center">
         <h1 class="text-3xl font-bold text-green-900">📸 Docteur Plante</h1>
         <p class="text-gray-700">Analyse IA détaillée et suivi sanitaire.</p>
+        {% if not analysis_enabled %}
+        <p class="inline-block mt-3 text-sm text-gray-600 bg-white/50 px-4 py-2 rounded-xl">Reconnaissance auto en préparation : vos photos sont conservées et seront analysables.</p>
+        {% endif %}
     </div>
 
     {% if not result %}
