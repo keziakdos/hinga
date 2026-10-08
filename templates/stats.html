@@ -38,10 +38,28 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         <div class="glass p-6 rounded-2xl">
-            <h3 class="font-bold text-green-900 mb-4 text-center">📅 Production par Mois</h3>
+            <h3 class="font-bold text-green-900 mb-4 text-center">📅 {{ prod_title }}</h3>
+            <form method="GET" action="{{ url_for('stats') }}" class="flex flex-wrap gap-2 justify-center mb-4 text-sm">
+                <select name="annee" onchange="this.form.submit()" class="p-2 rounded-lg bg-white/50 border border-white/30 font-bold">
+                    {% for y in years %}
+                    <option value="{{ y }}" {% if y == sel_year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+                <select name="grain" onchange="this.form.submit()" class="p-2 rounded-lg bg-white/50 border border-white/30 font-bold">
+                    <option value="mois" {% if grain == 'mois' %}selected{% endif %}>Par mois</option>
+                    <option value="semaine" {% if grain == 'semaine' %}selected{% endif %}>Par semaine</option>
+                </select>
+                <select name="plante" onchange="this.form.submit()" class="p-2 rounded-lg bg-white/50 border border-white/30 font-bold">
+                    <option value="0">Toutes plantes</option>
+                    {% for p in user_plants %}
+                    <option value="{{ p.id }}" {% if p.id == plant_filter %}selected{% endif %}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
             <div class="relative h-64">
                 <canvas id="chartMonths"></canvas>
             </div>
+            <p class="text-center text-xs text-gray-500 mt-2">Cliquez sur une culture (camembert ou tableau) pour son historique détaillé.</p>
         </div>
 
         <div class="glass p-6 rounded-2xl">
@@ -81,7 +99,7 @@
                     <tbody class="divide-y divide-gray-400/20">
                         {% for p in per_plant %}
                         <tr class="hover:bg-white/30 transition">
-                            <td class="py-2 font-bold text-green-800">{{ p.name }}</td>
+                            <td class="py-2 font-bold text-green-800"><a href="{{ url_for('stats_plant', plant_id=p.plant_id) }}" class="hover:underline" title="Voir l'historique">{{ p.name }}</a></td>
                             <td class="py-2 text-center">{{ p.count }}</td>
                             <td class="py-2 text-center font-mono">{{ p.qty }} kg</td>
                             <td class="py-2 text-xs text-gray-600">{{ p.sow }}</td>
@@ -132,15 +150,15 @@
         'rgba(234, 179, 8, 0.7)'   // Jaune
     ];
 
-    // 1. Graphique Mois (Bar Chart)
+    // 1. Graphique Production (mois / semaine, filtré)
     const ctxMonths = document.getElementById('chartMonths').getContext('2d');
     new Chart(ctxMonths, {
         type: 'bar',
         data: {
-            labels: {{ month_labels | safe }},
+            labels: {{ prod_labels | safe }},
             datasets: [{
                 label: 'Quantité (kg)',
-                data: {{ month_values | safe }},
+                data: {{ prod_values | safe }},
                 backgroundColor: 'rgba(34, 197, 94, 0.6)',
                 borderColor: 'rgba(34, 197, 94, 1)',
                 borderWidth: 1,
@@ -180,6 +198,7 @@
         }
     });
     {% if total_weight > 0 %}
+    const plantIds = {{ plant_ids | safe }};
     const ctxPlants = document.getElementById('chartPlants').getContext('2d');
     new Chart(ctxPlants, {
         type: 'doughnut',
@@ -196,6 +215,11 @@
             maintainAspectRatio: false,
             plugins: {
                 legend: { position: 'right' }
+            },
+            onClick: (evt, elements) => {
+                if (elements.length > 0 && plantIds[elements[0].index]) {
+                    window.location.href = '/stats/plant/' + plantIds[elements[0].index];
+                }
             }
         }
     });
