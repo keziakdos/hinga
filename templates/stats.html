@@ -16,6 +16,25 @@
         </div>
     </div>
 
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="glass p-4 rounded-2xl text-center">
+            <span class="block text-xs opacity-80 uppercase font-bold text-gray-600">Récoltes saisies</span>
+            <span class="block text-3xl font-bold text-green-900">{{ total_entries }}</span>
+        </div>
+        <div class="glass p-4 rounded-2xl text-center">
+            <span class="block text-xs opacity-80 uppercase font-bold text-gray-600">Plantes cultivées</span>
+            <span class="block text-3xl font-bold text-green-900">{{ distinct_plants }}</span>
+        </div>
+        <div class="glass p-4 rounded-2xl text-center">
+            <span class="block text-xs opacity-80 uppercase font-bold text-gray-600">Moyenne / récolte</span>
+            <span class="block text-3xl font-bold text-green-900">{{ avg_entry }} <span class="text-base">kg</span></span>
+        </div>
+        <div class="glass p-4 rounded-2xl text-center">
+            <span class="block text-xs opacity-80 uppercase font-bold text-gray-600">Meilleur mois</span>
+            <span class="block text-2xl font-bold text-green-900">{{ best_prod_month }}</span>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         <div class="glass p-6 rounded-2xl">
@@ -28,7 +47,8 @@
         <div class="glass p-6 rounded-2xl">
             <h3 class="font-bold text-green-900 mb-4 text-center">🍅 Top Cultures</h3>
             <div class="relative h-64 flex justify-center">
-                {% if total_weight > 0 %}
+    // 3. Graphique Plantes (Doughnut Chart)
+    {% if total_weight > 0 %}
                     <canvas id="chartPlants"></canvas>
                 {% else %}
                     <div class="flex items-center justify-center text-gray-500 italic h-full">
@@ -36,6 +56,66 @@
                     </div>
                 {% endif %}
             </div>
+        </div>
+
+        <div class="glass p-6 rounded-2xl">
+            <h3 class="font-bold text-green-900 mb-4 text-center">🌱 Semis par Mois (calendrier)</h3>
+            <div class="relative h-64">
+                <canvas id="chartSow"></canvas>
+            </div>
+            <p class="text-center text-sm text-gray-600 mt-2">On sème le plus en <b>{{ top_sow_month }}</b>.</p>
+        </div>
+
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <div class="glass p-6 rounded-2xl">
+            <h3 class="font-bold text-green-900 mb-4 text-center">🧮 Comptage par Plante</h3>
+            {% if per_plant %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="text-xs uppercase text-gray-500 border-b border-gray-400/30">
+                        <tr><th class="py-2">Plante</th><th class="py-2 text-center">Récoltes</th><th class="py-2 text-center">Total</th><th class="py-2">Semis</th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-400/20">
+                        {% for p in per_plant %}
+                        <tr class="hover:bg-white/30 transition">
+                            <td class="py-2 font-bold text-green-800">{{ p.name }}</td>
+                            <td class="py-2 text-center">{{ p.count }}</td>
+                            <td class="py-2 text-center font-mono">{{ p.qty }} kg</td>
+                            <td class="py-2 text-xs text-gray-600">{{ p.sow }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-center text-gray-500 italic">Pas encore de récoltes saisies.</p>
+            {% endif %}
+        </div>
+
+        <div class="glass p-6 rounded-2xl">
+            <h3 class="font-bold text-green-900 mb-4 text-center">🔮 Récoltes à venir ({{ current_month_name }})</h3>
+            {% if upcoming %}
+            <ul class="space-y-2">
+                {% for u in upcoming %}
+                <li class="flex justify-between items-center bg-white/40 p-3 rounded-lg">
+                    <div>
+                        <span class="font-bold block">{{ u.name }}</span>
+                        <span class="text-xs text-gray-600">Récolte : {{ u.window }}</span>
+                    </div>
+                    {% if u.current %}
+                    <span class="text-xs font-bold bg-green-600 text-white px-3 py-1 rounded-full">{{ u.status }}</span>
+                    {% else %}
+                    <span class="text-xs font-bold bg-orange-100 text-orange-800 border border-orange-300 px-3 py-1 rounded-full">{{ u.status }}</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-center text-gray-500 italic">Saisissez des récoltes pour estimer les prochaines.</p>
+            {% endif %}
         </div>
 
     </div>
@@ -76,7 +156,29 @@
         }
     });
 
-    // 2. Graphique Plantes (Doughnut Chart)
+    // 2. Graphique Semis par mois (Bar Chart)
+    const ctxSow = document.getElementById('chartSow').getContext('2d');
+    new Chart(ctxSow, {
+        type: 'bar',
+        data: {
+            labels: {{ month_labels | safe }},
+            datasets: [{
+                label: 'Plantes à semer',
+                data: {{ sow_per_month | safe }},
+                backgroundColor: 'rgba(234, 179, 8, 0.6)',
+                borderColor: 'rgba(234, 179, 8, 1)',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
     {% if total_weight > 0 %}
     const ctxPlants = document.getElementById('chartPlants').getContext('2d');
     new Chart(ctxPlants, {

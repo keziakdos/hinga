@@ -309,8 +309,10 @@ def harvests():
         flash('✅ Récolte ajoutée !')
         return redirect(url_for('harvests'))
 
-    # Seules les récoltes de l'utilisateur connecté
-    harvests_list = db.execute('SELECT h.*, p.name as plant_name FROM harvests h JOIN plants p ON h.plant_id = p.id WHERE h.user_id = ? ORDER BY h.date DESC', (user_id,)).fetchall()
+    # Seules les récoltes de l'utilisateur connecté (avec photo de la plante)
+    harvests_list = db.execute('''SELECT h.*, p.name as plant_name, p.image as plant_image
+                                  FROM harvests h JOIN plants p ON h.plant_id = p.id
+                                  WHERE h.user_id = ? ORDER BY h.date DESC''', (user_id,)).fetchall()
     plants = db.execute('SELECT id, name FROM plants ORDER BY name').fetchall()
     return render_template('harvests.html', harvests=harvests_list, plants=plants, today=datetime.today().strftime('%Y-%m-%d'))
 
@@ -340,9 +342,50 @@ def stats():
     month_labels_fr = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
     month_values = list(monthly_map.values())
 
+    # Comptage par plante (nb de récoltes + kg) + fenêtres semis/récolte
+    rows_counts = db.execute('''SELECT p.name, COUNT(*), SUM(h.quantity),
+        p.sow_start, p.sow_end, p.harvest_start, p.harvest_end, p.id
+        FROM harvests h JOIN plants p ON h.plant_id = p.id
+        WHERE h.user_id = ? GROUP BY p.id ORDER BY SUM(h.quantity) DESC''', (user_id,)).fetchall()
+    per_plant = [dict(name=r[0], count=r[1], qty=round(r[2] or 0, 2),
+                      sow=periode_label(r[3], r[4]), harvest=periode_label(r[5], r[6]),
+                      plant_id=r[7]) for r in rows_counts]
+    total_entries = sum(r['count'] for r in per_plant)
+    distinct_plants = len(per_plant)
+    avg_entry = round(total_weight / total_entries, 2) if total_entries else 0
+
+    # Semis par mois (calendrier global : nb de plantes à semer chaque mois)
+    all_plants = db.execute('SELECT sow_start, sow_end FROM plants').fetchall()
+    sow_per_month = [sum(1 for p in all_plants if month_in_range(m, p['sow_start'], p['sow_end']))
+                     for m in range(1, 13)]
+    top_sow_month = MOIS_FR[max(range(12), key=lambda i: sow_per_month[i])] if any(sow_per_month) else '—'
+
+    # Meilleur mois de production (kg récoltés)
+    best_prod_month = MOIS_FR[month_values.index(max(month_values))] if total_weight > 0 else '—'
+
+    # Estimation des récoltes à venir (plantes déjà cultivées par l'utilisateur)
+    now_m = datetime.now().month
+    upcoming = []
+    for r in rows_counts:
+        hs, he = r[5], r[6]
+        current = month_in_range(now_m, hs, he)
+        if current:
+            status = 'En récolte actuellement'
+        else:
+            nxt = next((k for k in range(1, 13)
+                        if month_in_range(((now_m - 1 + k) % 12) + 1, hs, he)), None)
+            status = f"Dès {mois_nom(((now_m - 1 + nxt) % 12) + 1)}" if nxt else '—'
+        upcoming.append(dict(name=r[0], window=periode_label(hs, he),
+                             status=status, current=current))
+
     return render_template('stats.html', total_weight=round(total_weight, 2),
                            plant_labels=json.dumps(plant_labels), plant_data=json.dumps(plant_data),
-                           month_labels=json.dumps(month_labels_fr), month_values=json.dumps(month_values))
+                           month_labels=json.dumps(month_labels_fr), month_values=json.dumps(month_values),
+                           per_plant=per_plant, total_entries=total_entries,
+                           distinct_plants=distinct_plants, avg_entry=avg_entry,
+                           sow_per_month=json.dumps(sow_per_month), top_sow_month=top_sow_month,
+                           best_prod_month=best_prod_month, upcoming=upcoming,
+                           current_month_name=MOIS_FR[now_m - 1])
 
 
 
