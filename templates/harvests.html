@@ -57,6 +57,7 @@
                     <table class="w-full text-left">
                         <thead class="text-xs uppercase text-gray-500 border-b border-gray-400/30">
                             <tr>
+                                <th class="py-2">Photo</th>
                                 <th class="py-2">Date</th>
                                 <th class="py-2">Plante</th>
                                 <th class="py-2">Poids</th>
@@ -66,6 +67,13 @@
                         <tbody class="divide-y divide-gray-400/20">
                             {% for h in harvests %}
                             <tr class="hover:bg-white/30 transition">
+                                <td class="py-2 pr-2">
+                                    {% if h.plant_image and h.plant_image != 'default.jpg' %}
+                                    <img src="{{ url_for('static', filename='img/' + h.plant_image) }}" alt="{{ h.plant_name }}" class="w-12 h-12 object-cover rounded-lg shadow" onerror="this.style.display='none'">
+                                    {% else %}
+                                    <span class="inline-flex w-12 h-12 items-center justify-center bg-green-100/60 rounded-lg text-xl">🌱</span>
+                                    {% endif %}
+                                </td>
                                 <td class="py-3 text-sm font-medium">{{ h.date }}</td>
                                 <td class="py-3 font-bold text-green-800">{{ h.plant_name }}</td>
                                 <td class="py-3 font-mono text-blue-900 bg-white/30 px-2 rounded-lg w-20 text-center">{{ h.quantity }} kg</td>
