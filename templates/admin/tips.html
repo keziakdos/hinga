@@ -1,33 +1,59 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="max-w-5xl mx-auto grid md:grid-cols-2 gap-8">
-    
-    <div class="glass p-6 rounded-2xl">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Conseils existants</h2>
-        <ul class="space-y-4">
-            {% for t in tips %}
-            <li class="flex justify-between items-start bg-white/40 p-3 rounded-lg">
-                <div>
-                    <span class="font-bold block">{{ t.title }}</span>
-                    <span class="text-xs text-gray-600">{{ t.content[:50] }}...</span>
-                </div>
-                <a href="{{ url_for('admin_delete_tip', tip_id=t.id) }}" class="text-red-600" onclick="return confirm('Supprimer ?')"><i class="ph ph-trash"></i></a>
-            </li>
-            {% endfor %}
-        </ul>
+<div class="max-w-5xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Gestion des Conseils</h1>
+        <a href="{{ url_for('admin_tip_categories') }}" class="bg-yellow-600/10 text-yellow-800 border border-yellow-300 px-4 py-2 rounded-lg font-bold hover:bg-yellow-600/20 flex items-center gap-2 text-sm">
+            <i class="ph ph-tag"></i> Gérer les catégories
+        </a>
     </div>
 
-    <div class="glass p-6 rounded-2xl h-fit">
-        <h2 class="text-xl font-bold text-yellow-600 mb-4">Ajouter un conseil</h2>
-        <form method="POST" enctype="multipart/form-data" class="space-y-4">
-            <input type="text" name="title" placeholder="Titre (ex: Paillage)" required class="w-full p-2 rounded bg-white/50 border border-white/30">
-            <textarea name="content" rows="4" placeholder="Contenu du conseil..." required class="w-full p-2 rounded bg-white/50 border border-white/30"></textarea>
-            <div>
-                <label class="text-sm font-bold">Image</label>
-                <input type="file" name="image" class="w-full p-2 bg-white/50 rounded">
-            </div>
-            <button type="submit" class="w-full bg-yellow-600 text-white py-2 rounded-lg font-bold">Ajouter</button>
-        </form>
+    <div class="grid md:grid-cols-2 gap-8">
+        <div class="glass p-6 rounded-2xl">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Conseils existants</h2>
+            <ul class="space-y-4">
+                {% for t in tips %}
+                <li class="flex justify-between items-start bg-white/40 p-3 rounded-lg gap-3">
+                    <img src="{{ url_for('static', filename='img/' + t.thumb) }}" alt="" class="w-14 h-14 object-cover rounded-lg shrink-0" onerror="this.style.display='none'">
+                    <div class="flex-grow">
+                        <span class="font-bold block">{{ t.title }}</span>
+                        {% if t.category_name %}
+                        <span class="inline-block text-xs bg-yellow-500/20 text-yellow-800 px-2 rounded-full font-bold uppercase">{{ t.category_name }}</span>
+                        {% endif %}
+                        <span class="text-xs text-gray-600 block">{{ t.content[:60] }}...</span>
+                    </div>
+                    <div class="flex gap-3 items-center shrink-0">
+                        <a href="{{ url_for('admin_edit_tip', tip_id=t.id) }}" class="text-blue-600" title="Modifier"><i class="ph ph-pencil"></i></a>
+                        <a href="{{ url_for('admin_delete_tip', tip_id=t.id) }}" class="text-red-600" onclick="return confirm('Supprimer ?')" title="Supprimer"><i class="ph ph-trash"></i></a>
+                    </div>
+                </li>
+                {% else %}
+                <p class="text-sm text-gray-500 italic">Aucun conseil pour le moment.</p>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="glass p-6 rounded-2xl h-fit">
+            <h2 class="text-xl font-bold text-yellow-600 mb-4">Ajouter un conseil</h2>
+            <form method="POST" enctype="multipart/form-data" class="space-y-4">
+                <input type="text" name="title" placeholder="Titre (ex: Paillage)" required class="w-full p-2 rounded bg-white/50 border border-white/30">
+                {% if categories %}
+                <select name="category_id" class="w-full p-2 rounded bg-white/50 border border-white/30">
+                    <option value="">— Sans catégorie —</option>
+                    {% for c in categories %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+                <textarea name="content" rows="4" placeholder="Contenu du conseil..." required class="w-full p-2 rounded bg-white/50 border border-white/30"></textarea>
+                <div>
+                    <label class="text-sm font-bold">Image (JPG, PNG, WEBP, GIF — 10 Mo max)</label>
+                    <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif" class="w-full p-2 bg-white/50 rounded">
+                    <p class="text-xs text-gray-500 mt-1">Redimensionnée automatiquement (page + miniature).</p>
+                </div>
+                <button type="submit" class="w-full bg-yellow-600 text-white py-2 rounded-lg font-bold">Ajouter</button>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}
