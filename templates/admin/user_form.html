@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-xl mx-auto pb-10">
+    <div class="glass p-8 rounded-3xl">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-green-900">Modifier : {{ user.username }}</h1>
+            <a href="{{ url_for('admin_users') }}" class="text-gray-600 underline text-sm">Annuler</a>
+        </div>
+
+        <form method="POST" class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="font-bold text-gray-700 text-sm">Prénom</label>
+                    <input type="text" name="first_name" value="{{ user.first_name or '' }}" class="w-full p-2 rounded bg-white/50 border border-white/30">
+                </div>
+                <div>
+                    <label class="font-bold text-gray-700 text-sm">Nom</label>
+                    <input type="text" name="last_name" value="{{ user.last_name or '' }}" class="w-full p-2 rounded bg-white/50 border border-white/30">
+                </div>
+            </div>
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Email</label>
+                <input type="email" name="email" value="{{ user.email or '' }}" class="w-full p-2 rounded bg-white/50 border border-white/30">
+            </div>
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Notes</label>
+                <textarea name="notes" rows="3" class="w-full p-2 rounded bg-white/50 border border-white/30">{{ user.notes or '' }}</textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="font-bold text-gray-700 text-sm">Rôle</label>
+                    <select name="role" class="w-full p-2 rounded bg-white/50 border border-white/30" {% if user.id == session['user_id'] %}disabled{% endif %}>
+                        <option value="user" {% if user.role == 'user' %}selected{% endif %}>Utilisateur</option>
+                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                    </select>
+                </div>
+                <div class="flex items-end pb-2">
+                    <label class="flex items-center gap-2 font-bold text-gray-700 text-sm">
+                        <input type="checkbox" name="is_active" value="1" {% if user.is_active != 0 %}checked{% endif %} {% if user.id == session['user_id'] %}disabled checked{% endif %} class="w-5 h-5">
+                        Compte actif
+                    </label>
+                </div>
+            </div>
+            {% if user.id == session['user_id'] %}
+            <p class="text-xs text-gray-500 italic">Votre propre rôle et activation ne sont pas modifiables ici.</p>
+            {% endif %}
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Nouveau mot de passe (vide = inchangé)</label>
+                <input type="password" name="new_password" placeholder="Laisser vide pour conserver" class="w-full p-2 rounded bg-white/50 border border-white/30">
+            </div>
+            <button type="submit" class="w-full bg-green-700 text-white py-3 rounded-xl font-bold">Enregistrer</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -22,10 +22,10 @@
             <tbody>
                 {% for p in plants %}
                 <tr class="hover:bg-white/20 border-b border-gray-200/20">
-                    <td class="p-2 font-bold">{{ p.name }}</td>
+                    <td class="p-2 font-bold"><a href="{{ url_for('plant_details', plant_id=p.id) }}" class="hover:text-green-700 hover:underline" title="Voir la fiche">{{ p.name }}</a></td>
                     <td class="p-2">{{ p.type }}</td>
-                    <td class="p-2">{{ p.sow_start }} à {{ p.sow_end }}</td>
-                    <td class="p-2">{{ p.harvest_start }} à {{ p.harvest_end }}</td>
+                    <td class="p-2">{{ periode_label(p.sow_start, p.sow_end) }}</td>
+                    <td class="p-2">{{ periode_label(p.harvest_start, p.harvest_end) }}</td>
                     <td class="p-2 text-right space-x-2">
                         <a href="{{ url_for('admin_edit_plant', plant_id=p.id) }}" class="text-blue-600"><i class="ph ph-pencil"></i></a>
                         <a href="{{ url_for('admin_delete_plant', plant_id=p.id) }}" class="text-red-600" onclick="return confirm('Supprimer {{ p.name }} ?')"><i class="ph ph-trash"></i></a>
