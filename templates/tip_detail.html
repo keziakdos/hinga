@@ -5,25 +5,44 @@
         <i class="ph ph-arrow-left"></i> Retour aux conseils
     </a>
 
-    <div class="glass rounded-3xl overflow-hidden">
+    <div id="imageModal" class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-xl hidden items-center justify-center p-4 cursor-zoom-out" onclick="closeModal()">
+        <img id="modalImage" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl">
+        <button class="absolute top-6 right-6 text-white bg-black/50 rounded-full p-2 hover:bg-white/20 transition">
+            <i class="ph ph-x text-3xl"></i>
+        </button>
+    </div>
+
+    <article class="glass rounded-3xl overflow-hidden">
 
         {% if tip.image and tip.image not in ['soil.jpg', 'water.jpg', 'mulch.jpg', 'rotation.jpg', 'bee.jpg', 'default_tip.jpg'] %}
-            <img src="{{ url_for('static', filename='img/' + tip.image) }}" class="w-full h-64 md:h-96 object-cover">
+            {% set tip_img = url_for('static', filename='img/' + tip.image) %}
         {% else %}
-            <img src="https://image.pollinations.ai/prompt/garden%20tip%20{{ tip.title }}?width=800&height=400&nologo=true" class="w-full h-64 md:h-96 object-cover">
+            {% set tip_img = 'https://image.pollinations.ai/prompt/garden%20tip%20' + tip.title + '?width=800&height=400&nologo=true' %}
         {% endif %}
-        
-        <div class="p-8">
-            <h1 class="text-3xl font-bold text-green-900 mb-6">{{ tip.title }}</h1>
-            <div class="prose prose-green max-w-none text-gray-800 leading-relaxed text-lg">
-                {{ tip.content }}
-            </div>
-            
-            <div class="mt-8 p-4 bg-green-100/50 rounded-xl border border-green-200 text-green-900 text-sm font-bold flex items-center gap-3">
-                <i class="ph ph-info text-xl"></i>
-                Astuce vérifiée par nos experts Hinga.
-            </div>
+        <div class="cursor-zoom-in" onclick="openModal('{{ tip_img }}')" title="Cliquer pour agrandir">
+            <img src="{{ tip_img }}" alt="{{ tip.title }}" class="w-full h-64 md:h-96 object-cover">
         </div>
-    </div>
+
+        <div class="p-8">
+            {% if tip.category_name %}
+            <span class="inline-block px-3 py-1 bg-yellow-500/80 text-white rounded-full text-xs font-bold uppercase tracking-wide shadow mb-4">{{ tip.category_name }}</span>
+            {% endif %}
+            <h1 class="text-3xl font-bold text-green-900 mb-2">{{ tip.title }}</h1>
+            <p class="text-sm text-gray-500 mb-6 flex items-center gap-2"><i class="ph ph-lightbulb"></i> Conseil jardinage Hinga</p>
+            <div class="prose prose-green max-w-none text-gray-800 leading-relaxed text-lg whitespace-pre-line">{{ tip.content }}</div>
+        </div>
+    </article>
 </div>
+
+<script>
+    function openModal(imgSrc) {
+        document.getElementById('modalImage').src = imgSrc;
+        document.getElementById('imageModal').classList.remove('hidden');
+        document.getElementById('imageModal').classList.add('flex');
+    }
+    function closeModal() {
+        document.getElementById('imageModal').classList.add('hidden');
+        document.getElementById('imageModal').classList.remove('flex');
+    }
+</script>
 {% endblock %}

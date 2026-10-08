@@ -18,7 +18,11 @@
                 <tr class="text-center text-green-900 border-b border-gray-400/30">
                     <th class="p-3 font-bold sticky left-0 bg-white/30 backdrop-blur-md z-10">Plante</th>
                     {% for m in months %}
-                        <th class="p-3 text-sm uppercase">{{ m }}</th>
+                        {% set month_num = loop.index %}
+                        <th class="p-3 text-sm uppercase">
+                            <a href="{{ url_for('calendar', mois=month_num) }}" title="Voir les semis et récoltes de {{ MOIS_FR[month_num - 1] }}"
+                               class="inline-block px-2 py-1 rounded-lg hover:bg-green-600 hover:text-white transition {% if selected_month == month_num %}bg-green-700 text-white font-bold shadow{% endif %}">{{ m }}</a>
+                        </th>
                     {% endfor %}
                 </tr>
             </thead>
@@ -37,11 +41,11 @@
                         <td class="p-1 text-center h-12 align-middle relative">
                             <div class="w-full h-6 rounded flex items-center justify-center">
                                 
-                                {% if i >= p.sow_start and i <= p.sow_end %}
+                                {% if month_in_range(i, p.sow_start, p.sow_end) %}
                                     <div class="w-full h-full bg-green-500 rounded shadow-sm opacity-90 mx-0.5" title="Semis"></div>
                                 {% endif %}
 
-                                {% if i >= p.harvest_start and i <= p.harvest_end %}
+                                {% if month_in_range(i, p.harvest_start, p.harvest_end) %}
                                     <div class="w-full h-full bg-orange-400 rounded shadow-sm opacity-90 mx-0.5" title="Récolte"></div>
                                 {% endif %}
 
@@ -53,5 +57,42 @@
             </tbody>
         </table>
     </div>
+
+    {% if selected_month %}
+    <div id="detail-mois" class="glass p-6 rounded-2xl mt-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-bold text-green-900">🗓️ {{ MOIS_FR[selected_month - 1] }}</h2>
+            <a href="{{ url_for('calendar') }}" class="text-sm text-gray-600 underline">Effacer la sélection</a>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-green-100/40 p-4 rounded-xl border border-green-200/50">
+                <h3 class="font-bold text-green-900 mb-3 flex items-center gap-2"><i class="ph ph-seedling"></i> À semer ({{ a_semis|length }})</h3>
+                {% if a_semis %}
+                <ul class="space-y-2">
+                    {% for p in a_semis %}
+                    <li><a href="{{ url_for('plant_details', plant_id=p.id) }}" class="font-bold text-green-800 hover:underline">{{ p.name }}</a>
+                        <span class="text-xs text-gray-600"> — {{ p.type }} · Semis : {{ periode_label(p.sow_start, p.sow_end) }}</span></li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-sm text-gray-600 italic">Aucun semis ce mois-ci.</p>
+                {% endif %}
+            </div>
+            <div class="bg-orange-100/40 p-4 rounded-xl border border-orange-200/50">
+                <h3 class="font-bold text-orange-900 mb-3 flex items-center gap-2"><i class="ph ph-basket"></i> À récolter ({{ a_recolter|length }})</h3>
+                {% if a_recolter %}
+                <ul class="space-y-2">
+                    {% for p in a_recolter %}
+                    <li><a href="{{ url_for('plant_details', plant_id=p.id) }}" class="font-bold text-orange-800 hover:underline">{{ p.name }}</a>
+                        <span class="text-xs text-gray-600"> — {{ p.type }} · Récolte : {{ periode_label(p.harvest_start, p.harvest_end) }}</span></li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-sm text-gray-600 italic">Aucune récolte ce mois-ci.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
