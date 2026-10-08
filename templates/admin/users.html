@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto grid md:grid-cols-2 gap-8">
+    
+    <div class="glass p-6 rounded-2xl">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Utilisateurs existants</h2>
+        <ul class="space-y-2">
+            {% for u in users %}
+            <li class="flex justify-between items-center bg-white/40 p-3 rounded-lg">
+                <div>
+                    <span class="font-bold">{{ u.username }}</span>
+                    <span class="text-xs bg-gray-200 px-2 rounded">{{ u.role }}</span>
+                </div>
+                {% if u.id != session['user_id'] %}
+                <a href="{{ url_for('admin_delete_user', user_id=u.id) }}" class="text-red-600 hover:text-red-800" onclick="return confirm('Sûr ?')">
+                    <i class="ph ph-trash"></i>
+                </a>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="glass p-6 rounded-2xl h-fit">
+        <h2 class="text-xl font-bold text-green-900 mb-4">Créer un utilisateur</h2>
+        <form method="POST" class="space-y-4">
+            <input type="text" name="username" placeholder="Identifiant" required class="w-full p-2 rounded bg-white/50 border border-white/30">
+            <input type="password" name="password" placeholder="Mot de passe" required class="w-full p-2 rounded bg-white/50 border border-white/30">
+            <button type="submit" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold">Créer</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

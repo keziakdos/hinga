@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <a href="{{ url_for('tips') }}" class="inline-flex items-center gap-2 text-white bg-black/20 hover:bg-black/40 px-4 py-2 rounded-lg mb-4 transition">
+        <i class="ph ph-arrow-left"></i> Retour aux conseils
+    </a>
+
+    <div class="glass rounded-3xl overflow-hidden">
+
+        {% if tip.image and tip.image not in ['soil.jpg', 'water.jpg', 'mulch.jpg', 'rotation.jpg', 'bee.jpg', 'default_tip.jpg'] %}
+            <img src="{{ url_for('static', filename='img/' + tip.image) }}" class="w-full h-64 md:h-96 object-cover">
+        {% else %}
+            <img src="https://image.pollinations.ai/prompt/garden%20tip%20{{ tip.title }}?width=800&height=400&nologo=true" class="w-full h-64 md:h-96 object-cover">
+        {% endif %}
+        
+        <div class="p-8">
+            <h1 class="text-3xl font-bold text-green-900 mb-6">{{ tip.title }}</h1>
+            <div class="prose prose-green max-w-none text-gray-800 leading-relaxed text-lg">
+                {{ tip.content }}
+            </div>
+            
+            <div class="mt-8 p-4 bg-green-100/50 rounded-xl border border-green-200 text-green-900 text-sm font-bold flex items-center gap-3">
+                <i class="ph ph-info text-xl"></i>
+                Astuce vérifiée par nos experts Hinga.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

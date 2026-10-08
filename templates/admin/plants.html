@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Gestion des Plantes</h1>
+        <a href="{{ url_for('admin_edit_plant') }}" class="bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-700 flex items-center gap-2">
+            <i class="ph ph-plus"></i> Nouvelle Plante
+        </a>
+    </div>
+
+    <div class="glass p-6 rounded-2xl overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="border-b border-gray-400/30">
+                    <th class="p-2">Nom</th>
+                    <th class="p-2">Type</th>
+                    <th class="p-2">Semis (Mois)</th>
+                    <th class="p-2">Récolte (Mois)</th>
+                    <th class="p-2 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in plants %}
+                <tr class="hover:bg-white/20 border-b border-gray-200/20">
+                    <td class="p-2 font-bold">{{ p.name }}</td>
+                    <td class="p-2">{{ p.type }}</td>
+                    <td class="p-2">{{ p.sow_start }} à {{ p.sow_end }}</td>
+                    <td class="p-2">{{ p.harvest_start }} à {{ p.harvest_end }}</td>
+                    <td class="p-2 text-right space-x-2">
+                        <a href="{{ url_for('admin_edit_plant', plant_id=p.id) }}" class="text-blue-600"><i class="ph ph-pencil"></i></a>
+                        <a href="{{ url_for('admin_delete_plant', plant_id=p.id) }}" class="text-red-600" onclick="return confirm('Supprimer {{ p.name }} ?')"><i class="ph ph-trash"></i></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

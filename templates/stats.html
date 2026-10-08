@@ -1,0 +1,102 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="max-w-6xl mx-auto space-y-6">
+    
+    <div class="glass p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center text-center md:text-left gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-green-900">📊 Statistiques du Potager</h1>
+            <p class="text-gray-600">Analysez vos performances de jardinage.</p>
+        </div>
+        <div class="bg-gradient-to-r from-green-500 to-green-700 text-white p-4 rounded-xl shadow-lg min-w-[200px]">
+            <span class="block text-sm opacity-80 uppercase font-bold">Total Récolté</span>
+            <span class="block text-4xl font-bold">{{ total_weight }} <span class="text-xl">kg</span></span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <div class="glass p-6 rounded-2xl">
+            <h3 class="font-bold text-green-900 mb-4 text-center">📅 Production par Mois</h3>
+            <div class="relative h-64">
+                <canvas id="chartMonths"></canvas>
+            </div>
+        </div>
+
+        <div class="glass p-6 rounded-2xl">
+            <h3 class="font-bold text-green-900 mb-4 text-center">🍅 Top Cultures</h3>
+            <div class="relative h-64 flex justify-center">
+                {% if total_weight > 0 %}
+                    <canvas id="chartPlants"></canvas>
+                {% else %}
+                    <div class="flex items-center justify-center text-gray-500 italic h-full">
+                        Pas assez de données
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Configuration des couleurs communes
+    const colors = [
+        'rgba(34, 197, 94, 0.7)',  // Vert
+        'rgba(234, 88, 12, 0.7)',  // Orange
+        'rgba(59, 130, 246, 0.7)', // Bleu
+        'rgba(168, 85, 247, 0.7)', // Violet
+        'rgba(236, 72, 153, 0.7)', // Rose
+        'rgba(234, 179, 8, 0.7)'   // Jaune
+    ];
+
+    // 1. Graphique Mois (Bar Chart)
+    const ctxMonths = document.getElementById('chartMonths').getContext('2d');
+    new Chart(ctxMonths, {
+        type: 'bar',
+        data: {
+            labels: {{ month_labels | safe }},
+            datasets: [{
+                label: 'Quantité (kg)',
+                data: {{ month_values | safe }},
+                backgroundColor: 'rgba(34, 197, 94, 0.6)',
+                borderColor: 'rgba(34, 197, 94, 1)',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // 2. Graphique Plantes (Doughnut Chart)
+    {% if total_weight > 0 %}
+    const ctxPlants = document.getElementById('chartPlants').getContext('2d');
+    new Chart(ctxPlants, {
+        type: 'doughnut',
+        data: {
+            labels: {{ plant_labels | safe }},
+            datasets: [{
+                data: {{ plant_data | safe }},
+                backgroundColor: colors,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right' }
+            }
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

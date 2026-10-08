@@ -1,0 +1,104 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div id="imageModal" class="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-xl hidden items-center justify-center p-4 cursor-zoom-out" onclick="closeModal()">
+    <img id="modalImage" src="" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-fade-in">
+    <button class="absolute top-6 right-6 text-white bg-black/50 rounded-full p-2 hover:bg-white/20 transition">
+        <i class="ph ph-x text-3xl"></i>
+    </button>
+</div>
+
+
+<div class="max-w-6xl mx-auto pb-20">
+    <a href="{{ url_for('calendar') }}" class="inline-flex items-center gap-2 text-white bg-black/20 hover:bg-black/40 px-4 py-2 rounded-lg mb-6 transition backdrop-blur-md font-semibold">
+        <i class="ph ph-arrow-left"></i> Retour au calendrier
+    </a>
+
+    <div class="glass rounded-3xl overflow-hidden flex flex-col md:flex-row mb-8 group">
+        
+        <div class="md:w-5/12 h-72 md:h-auto relative bg-gray-900 cursor-zoom-in overflow-hidden" onclick="openModal(this.querySelector('img').src)">
+            <div class="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition duration-500 z-10"></div>
+            
+            {% if plant.image and plant.image != 'default.jpg' and plant.image is not none %}
+                <img src="{{ url_for('static', filename='img/' + plant.image) }}" alt="{{ plant.name }}" class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition duration-700">
+            {% else %}
+                <img src="https://image.pollinations.ai/prompt/cinematic%20photo%20of%20{{ plant.name }}%20plant%20in%20a%20garden?width=800&height=1000&nologo=true" alt="{{ plant.name }}" class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition duration-700">
+            {% endif %}
+
+             <div class="absolute top-4 left-4 z-20">
+                <span class="inline-block px-3 py-1 bg-green-500/80 backdrop-blur text-white rounded-full text-xs font-bold uppercase tracking-wide shadow-lg">{{ plant.type }}</span>
+            </div>
+             <div class="absolute bottom-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition bg-black/50 p-2 rounded-full text-white">
+                <i class="ph ph-arrows-out-simple text-xl"></i>
+            </div>
+        </div>
+
+        <div class="md:w-7/12 p-6 md:p-10 flex flex-col justify-center bg-gradient-to-br from-white/40 to-white/10">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-green-900 mb-8 leading-tight">{{ plant.name }}</h1>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-green-100/60 p-4 rounded-2xl border border-green-200/50 flex flex-col items-center">
+                    <i class="ph ph-seedling text-3xl text-green-600 mb-2"></i>
+                    <span class="block text-xs text-green-800 uppercase font-bold mb-1">Semis</span>
+                    <span class="text-lg font-bold text-green-900">Mois {{ plant.sow_start }} - {{ plant.sow_end }}</span>
+                </div>
+                <div class="bg-orange-100/60 p-4 rounded-2xl border border-orange-200/50 flex flex-col items-center">
+                    <i class="ph ph-basket text-3xl text-orange-600 mb-2"></i>
+                    <span class="block text-xs text-orange-800 uppercase font-bold mb-1">Récolte</span>
+                    <span class="text-lg font-bold text-orange-900">Mois {{ plant.harvest_start }} - {{ plant.harvest_end }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="text-2xl font-bold text-green-900 mb-6 flex items-center gap-3 bg-white/30 p-3 rounded-xl backdrop-blur-md inline-block">
+        <i class="ph ph-book-open"></i> Fiche Technique Complète
+    </h2>
+
+    <div class="grid md:grid-cols-2 gap-6 items-start">
+        
+        <div class="space-y-6">
+            <div class="glass p-6 rounded-2xl border-t-4 border-yellow-400 hover:bg-white/40 transition">
+                <h3 class="font-bold text-xl text-green-900 flex items-center gap-3 mb-4"><i class="ph ph-sun text-2xl text-yellow-500"></i> Conditions Climatiques</h3>
+                <div class="prose text-gray-800 leading-relaxed whitespace-pre-line">{{ plant.section_sun or 'Information non renseignée.' }}</div>
+            </div>
+             <div class="glass p-6 rounded-2xl border-t-4 border-amber-700 hover:bg-white/40 transition">
+                <h3 class="font-bold text-xl text-green-900 flex items-center gap-3 mb-4"><i class="ph ph-grains text-2xl text-amber-700"></i> Sol & Racines</h3>
+                 <div class="prose text-gray-800 leading-relaxed whitespace-pre-line">{{ plant.section_soil or 'Information non renseignée.' }}</div>
+            </div>
+             <div class="glass p-6 rounded-2xl border-t-4 border-blue-400 hover:bg-white/40 transition">
+                <h3 class="font-bold text-xl text-green-900 flex items-center gap-3 mb-4"><i class="ph ph-drop text-2xl text-blue-500"></i> Arrosage & Eau</h3>
+                 <div class="prose text-gray-800 leading-relaxed whitespace-pre-line">{{ plant.section_water or 'Information non renseignée.' }}</div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="glass p-6 rounded-2xl border-t-4 border-green-400 hover:bg-white/40 transition">
+                <h3 class="font-bold text-xl text-green-900 flex items-center gap-3 mb-4"><i class="ph ph-seedling text-2xl text-green-500"></i> Semis & Plantation</h3>
+                 <div class="prose text-gray-800 leading-relaxed whitespace-pre-line">{{ plant.section_sowing or 'Information non renseignée.' }}</div>
+            </div>
+             <div class="glass p-6 rounded-2xl border-t-4 border-red-400 hover:bg-white/40 transition">
+                <h3 class="font-bold text-xl text-green-900 flex items-center gap-3 mb-4"><i class="ph ph-bug text-2xl text-red-500"></i> Maladies & Ravageurs</h3>
+                 <div class="prose text-gray-800 leading-relaxed whitespace-pre-line">{{ plant.section_diseases or 'Information non renseignée.' }}</div>
+            </div>
+             <div class="glass p-6 rounded-2xl border-t-4 border-orange-400 hover:bg-white/40 transition">
+                <h3 class="font-bold text-xl text-green-900 flex items-center gap-3 mb-4"><i class="ph ph-basket text-2xl text-orange-500"></i> Récolte & Rendement</h3>
+                 <div class="prose text-gray-800 leading-relaxed whitespace-pre-line">{{ plant.section_harvest or 'Information non renseignée.' }}</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function openModal(imgSrc) {
+        document.getElementById('modalImage').src = imgSrc;
+        document.getElementById('imageModal').classList.remove('hidden');
+        document.getElementById('imageModal').classList.add('flex');
+    }
+    function closeModal() {
+        document.getElementById('imageModal').classList.add('hidden');
+        document.getElementById('imageModal').classList.remove('flex');
+    }
+</script>
+{% endblock %}

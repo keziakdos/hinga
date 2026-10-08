@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+backup/
+uploads/
+static/img/user_*.jpg
+static/img/temp_*.jpg
+oldversion/

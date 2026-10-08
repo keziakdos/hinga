@@ -1,0 +1,57 @@
+/* Import de la police "Outfit" (Moderne et ronde) */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
+body {
+    /* Fond avec voile sombre pour contraste */
+    background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('../img/bg.jpg') no-repeat center center fixed;
+    background-size: cover;
+    
+    font-family: 'Outfit', sans-serif;
+    
+    /* AUGMENTATION DE LA TAILLE ET DE LA COULEUR */
+    font-size: 17px; /* Un peu plus grand */
+    color: #0f172a; /* Bleu-Noir très profond (Slate 900) pour un contraste maximal */
+    -webkit-font-smoothing: antialiased; /* Lissage des polices */
+}
+
+/* CARTE GLASS : Plus blanche, moins transparente */
+.glass {
+    background: rgba(255, 255, 255, 0.92); /* 92% d'opacité (quasi blanc) */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.2); /* Ombre douce pour détacher du fond */
+}
+
+/* Version sombre (pour les titres encadrés ou infos importantes) */
+.glass-dark {
+    background: rgba(20, 83, 45, 0.95); /* Vert forêt intense */
+    backdrop-filter: blur(10px);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* TYPOGRAPHIE SPÉCIFIQUE */
+
+/* Les paragraphes : très aérés */
+p {
+    line-height: 1.8; /* Beaucoup d'espace entre les lignes */
+    margin-bottom: 1rem;
+    color: #334155; /* Gris anthracite (Slate 700) pour le corps de texte */
+    font-weight: 400; /* Poids normal (pas light) */
+}
+
+/* Les titres : très gras et verts */
+h1, h2, h3, h4 {
+    font-weight: 800; /* Extra Bold */
+    color: #14532d; /* Vert très sombre */
+    letter-spacing: -0.02em; /* Lettres un peu plus serrées pour les titres */
+    line-height: 1.2;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #15803d; border-radius: 5px; }

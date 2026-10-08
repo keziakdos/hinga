@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto grid md:grid-cols-2 gap-8">
+    
+    <div class="glass p-6 rounded-2xl">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Conseils existants</h2>
+        <ul class="space-y-4">
+            {% for t in tips %}
+            <li class="flex justify-between items-start bg-white/40 p-3 rounded-lg">
+                <div>
+                    <span class="font-bold block">{{ t.title }}</span>
+                    <span class="text-xs text-gray-600">{{ t.content[:50] }}...</span>
+                </div>
+                <a href="{{ url_for('admin_delete_tip', tip_id=t.id) }}" class="text-red-600" onclick="return confirm('Supprimer ?')"><i class="ph ph-trash"></i></a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="glass p-6 rounded-2xl h-fit">
+        <h2 class="text-xl font-bold text-yellow-600 mb-4">Ajouter un conseil</h2>
+        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+            <input type="text" name="title" placeholder="Titre (ex: Paillage)" required class="w-full p-2 rounded bg-white/50 border border-white/30">
+            <textarea name="content" rows="4" placeholder="Contenu du conseil..." required class="w-full p-2 rounded bg-white/50 border border-white/30"></textarea>
+            <div>
+                <label class="text-sm font-bold">Image</label>
+                <input type="file" name="image" class="w-full p-2 bg-white/50 rounded">
+            </div>
+            <button type="submit" class="w-full bg-yellow-600 text-white py-2 rounded-lg font-bold">Ajouter</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

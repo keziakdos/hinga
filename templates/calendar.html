@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    
+    <div class="glass p-6 rounded-2xl mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        <h1 class="text-3xl font-bold text-green-900">📅 Calendrier du Potager</h1>
+        
+        <div class="flex gap-4 text-sm font-semibold bg-white/40 p-2 rounded-lg">
+            <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-green-500 shadow"></span> Semis</div>
+            <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-orange-400 shadow"></span> Récolte</div>
+        </div>
+    </div>
+
+    <div class="glass p-4 rounded-2xl w-full overflow-x-auto relative">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="text-center text-green-900 border-b border-gray-400/30">
+                    <th class="p-3 font-bold sticky left-0 bg-white/30 backdrop-blur-md z-10">Plante</th>
+                    {% for m in months %}
+                        <th class="p-3 text-sm uppercase">{{ m }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody class="text-sm font-medium">
+                {% for p in plants %}
+                <tr class="hover:bg-white/20 transition border-b border-gray-200/20">
+                    
+		    <td class="p-3 sticky left-0 bg-white/30 backdrop-blur-md font-bold text-gray-800 z-10 whitespace-nowrap group">
+    			<a href="{{ url_for('plant_details', plant_id=p.id) }}" class="group-hover:text-green-700 transition flex flex-col">
+        			{{ p.name }} 
+        			<span class="text-xs font-normal text-gray-600 group-hover:text-green-600">{{ p.type }}</span>
+    			</a>
+		    </td>
+
+                    {% for i in range(1, 13) %}
+                        <td class="p-1 text-center h-12 align-middle relative">
+                            <div class="w-full h-6 rounded flex items-center justify-center">
+                                
+                                {% if i >= p.sow_start and i <= p.sow_end %}
+                                    <div class="w-full h-full bg-green-500 rounded shadow-sm opacity-90 mx-0.5" title="Semis"></div>
+                                {% endif %}
+
+                                {% if i >= p.harvest_start and i <= p.harvest_end %}
+                                    <div class="w-full h-full bg-orange-400 rounded shadow-sm opacity-90 mx-0.5" title="Récolte"></div>
+                                {% endif %}
+
+                            </div>
+                        </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

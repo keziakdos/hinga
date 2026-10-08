@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    
+    <div class="glass p-6 rounded-2xl mb-8 text-center">
+        <h1 class="text-3xl font-bold text-green-900 mb-2">💡 Conseils de Jardinage</h1>
+        <p class="text-gray-700">Les bonnes pratiques pour un potager en pleine santé.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for tip in tips %}
+       
+	<a href="{{ url_for('tip_details', tip_id=tip.id) }}" class="glass rounded-2xl overflow-hidden hover:scale-[1.02] transition duration-300 flex flex-col h-full cursor-pointer block">
+
+
+            
+		<div class="h-48 overflow-hidden bg-gray-200 relative">
+                {% if tip.image and tip.image not in ['soil.jpg', 'water.jpg', 'mulch.jpg', 'rotation.jpg', 'bee.jpg', 'default_tip.jpg'] %}
+                     <img src="{{ url_for('static', filename='img/' + tip.image) }}" 
+                          alt="{{ tip.title }}" 
+                          class="w-full h-full object-cover transform hover:scale-110 transition duration-500">
+                {% else %}
+                     <img src="https://image.pollinations.ai/prompt/garden%20tip%20{{ tip.title }}?width=400&height=300&nologo=true" 
+                          alt="{{ tip.title }}" 
+                          class="w-full h-full object-cover transform hover:scale-110 transition duration-500">
+                {% endif %}
+                
+                <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+            	</div>
+
+
+
+
+            <div class="p-6 flex-grow flex flex-col">
+                <h3 class="text-xl font-bold text-green-900 mb-3">{{ tip.title }}</h3>
+
+		<p class="text-gray-700 leading-relaxed text-sm flex-grow">
+                    {{ tip.content[:100] }}...
+                    <span class="block mt-2 text-green-700 font-bold text-xs underline">Lire la suite</span>
+                </p>
+
+            </div>
+            
+            <div class="bg-green-600/10 p-3 flex justify-between items-center text-xs text-green-800 font-bold uppercase tracking-wider">
+                <span>Astuce Hinga</span>
+                <i class="ph ph-flower-lotus text-lg"></i>
+            </div>
+        
+	</a>
+
+
+        {% endfor %}
+    </div>
+
+</div>
+{% endblock %}
