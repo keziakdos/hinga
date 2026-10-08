@@ -327,13 +327,64 @@ def stats():
     total_weight = db.execute('SELECT SUM(quantity) FROM harvests WHERE user_id = ?', (user_id,)).fetchone()[0] or 0
     
     rows_plants = db.execute('''
-        SELECT p.name, SUM(h.quantity) FROM harvests h 
+        SELECT p.id, p.name, SUM(h.quantity) FROM harvests h 
         JOIN plants p ON h.plant_id = p.id 
-        WHERE h.user_id = ? GROUP BY p.name ORDER BY SUM(h.quantity) DESC
+        WHERE h.user_id = ? GROUP BY p.id ORDER BY SUM(h.quantity) DESC
     ''', (user_id,)).fetchall()
     
-    plant_labels = [row[0] for row in rows_plants]
-    plant_data = [row[1] for row in rows_plants]
+    plant_ids = [row[0] for row in rows_plants]
+    plant_labels = [row[1] for row in rows_plants]
+    plant_data = [row[2] for row in rows_plants]
+
+    # --- Filtres production : année / grain (mois-semaine) / plante ---
+    year_rows = db.execute("SELECT DISTINCT strftime('%Y', date) FROM harvests WHERE user_id = ? AND date IS NOT NULL",
+                           (user_id,)).fetchall()
+    cur_year = str(datetime.now().year)
+    years = sorted({r[0] for r in year_rows if r[0]} | {cur_year}, reverse=True)
+    sel_year = request.args.get('annee', cur_year)
+    if sel_year not in years:
+        sel_year = cur_year
+    grain = 'semaine' if request.args.get('grain') == 'semaine' else 'mois'
+    try:
+        plant_filter = int(request.args.get('plante', 0))
+    except (TypeError, ValueError):
+        plant_filter = 0
+
+    filt_query = "SELECT date, quantity FROM harvests WHERE user_id = ? AND strftime('%Y', date) = ?"
+    filt_params = [user_id, sel_year]
+    if plant_filter:
+        filt_query += " AND plant_id = ?"
+        filt_params.append(plant_filter)
+    entries = db.execute(filt_query, filt_params).fetchall()
+
+    if grain == 'semaine':
+        prod_labels = [f"S{w}" for w in range(1, 54)]
+        prod_values = [0] * 53
+        for e in entries:
+            try:
+                d = datetime.strptime(e['date'][:10], '%Y-%m-%d')
+                if d.strftime('%Y') == sel_year:
+                    prod_values[d.isocalendar()[1] - 1] += e['quantity'] or 0
+            except (ValueError, TypeError):
+                continue
+        prod_values = [round(v, 2) for v in prod_values]
+        prod_title = "Production par Semaine"
+    else:
+        prod_labels = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+        prod_values = [0] * 12
+        for e in entries:
+            try:
+                m = int(e['date'][5:7])
+                if 1 <= m <= 12:
+                    prod_values[m - 1] += e['quantity'] or 0
+            except (ValueError, TypeError, IndexError):
+                continue
+        prod_values = [round(v, 2) for v in prod_values]
+        prod_title = "Production par Mois"
+
+    user_plants = db.execute('''SELECT DISTINCT p.id, p.name FROM harvests h
+                                JOIN plants p ON h.plant_id = p.id
+                                WHERE h.user_id = ? ORDER BY p.name''', (user_id,)).fetchall()
 
     monthly_map = {f"{i:02d}": 0 for i in range(1, 13)}
     rows_months = db.execute("SELECT strftime('%m', date) as m, SUM(quantity) FROM harvests WHERE user_id = ? GROUP BY m", (user_id,)).fetchall()
@@ -381,12 +432,53 @@ def stats():
 
     return render_template('stats.html', total_weight=round(total_weight, 2),
                            plant_labels=json.dumps(plant_labels), plant_data=json.dumps(plant_data),
+                           plant_ids=json.dumps(plant_ids),
                            month_labels=json.dumps(month_labels_fr), month_values=json.dumps(month_values),
                            per_plant=per_plant, total_entries=total_entries,
                            distinct_plants=distinct_plants, avg_entry=avg_entry,
                            sow_per_month=json.dumps(sow_per_month), top_sow_month=top_sow_month,
                            best_prod_month=best_prod_month, upcoming=upcoming,
-                           current_month_name=MOIS_FR[now_m - 1])
+                           current_month_name=MOIS_FR[now_m - 1],
+                           years=years, sel_year=sel_year, grain=grain,
+                           plant_filter=plant_filter, user_plants=user_plants,
+                           prod_labels=json.dumps(prod_labels),
+                           prod_values=json.dumps(prod_values), prod_title=prod_title)
+
+
+@app.route('/stats/plant/<int:plant_id>')
+@login_required
+def stats_plant(plant_id):
+    """Historique d'une culture : ajouts + période la plus récoltée."""
+    db = get_db()
+    user_id = session['user_id']
+    plant = db.execute('SELECT * FROM plants WHERE id = ?', (plant_id,)).fetchone()
+    if plant is None:
+        flash("Plante introuvable.")
+        return redirect(url_for('stats'))
+
+    entries = db.execute('''SELECT date, quantity, notes FROM harvests
+                            WHERE user_id = ? AND plant_id = ? ORDER BY date DESC''',
+                         (user_id, plant_id)).fetchall()
+    monthly = [0] * 12
+    for e in entries:
+        try:
+            m = int((e['date'] or '')[5:7])
+            if 1 <= m <= 12:
+                monthly[m - 1] += e['quantity'] or 0
+        except (ValueError, TypeError, IndexError):
+            continue
+    monthly = [round(v, 2) for v in monthly]
+    total = round(sum(monthly), 2)
+    count = len(entries)
+    best_month = MOIS_FR[monthly.index(max(monthly))] if total > 0 else '—'
+
+    return render_template('stats_plant.html', plant=plant, entries=entries,
+                           monthly=json.dumps(monthly),
+                           month_labels=json.dumps(['Jan', 'Fév', 'Mar', 'Avr', 'Mai',
+                                                    'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']),
+                           total=total, count=count,
+                           avg=round(total / count, 2) if count else 0,
+                           best_month=best_month)
 
 
 

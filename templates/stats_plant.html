@@ -1,0 +1,83 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="max-w-5xl mx-auto space-y-6 pb-10">
+    <a href="{{ url_for('stats') }}" class="inline-flex items-center gap-2 text-white bg-black/20 hover:bg-black/40 px-4 py-2 rounded-lg transition">
+        <i class="ph ph-arrow-left"></i> Retour aux stats
+    </a>
+
+    <div class="glass p-6 rounded-2xl flex flex-col md:flex-row gap-6 items-center">
+        {% if plant.image and plant.image != 'default.jpg' %}
+        <img src="{{ url_for('static', filename='img/' + plant.image) }}" alt="{{ plant.name }}" class="w-28 h-28 object-cover rounded-2xl shadow" onerror="this.style.display='none'">
+        {% else %}
+        <span class="inline-flex w-28 h-28 items-center justify-center bg-green-100/60 rounded-2xl text-5xl">🌱</span>
+        {% endif %}
+        <div class="flex-grow text-center md:text-left">
+            <h1 class="text-3xl font-bold text-green-900">{{ plant.name }}</h1>
+            <p class="text-gray-600 text-sm">Semis : {{ periode_label(plant.sow_start, plant.sow_end) }} · Récolte : {{ periode_label(plant.harvest_start, plant.harvest_end) }}</p>
+            <a href="{{ url_for('plant_details', plant_id=plant.id) }}" class="text-green-700 font-bold text-sm underline">Voir la fiche plante</a>
+        </div>
+        <div class="flex gap-3 text-center">
+            <div class="bg-white/50 px-4 py-2 rounded-xl"><span class="block text-2xl font-bold">{{ count }}</span><span class="text-xs uppercase text-gray-500 font-bold">Ajouts</span></div>
+            <div class="bg-white/50 px-4 py-2 rounded-xl"><span class="block text-2xl font-bold">{{ total }} kg</span><span class="text-xs uppercase text-gray-500 font-bold">Total</span></div>
+            <div class="bg-white/50 px-4 py-2 rounded-xl"><span class="block text-2xl font-bold">{{ avg }} kg</span><span class="text-xs uppercase text-gray-500 font-bold">Moyenne</span></div>
+        </div>
+    </div>
+
+    <div class="glass p-6 rounded-2xl">
+        <h3 class="font-bold text-green-900 mb-4 text-center">📅 Récolté par Mois — le plus récolté en <b>{{ best_month }}</b></h3>
+        <div class="relative h-56">
+            <canvas id="chartPlantMonths"></canvas>
+        </div>
+    </div>
+
+    <div class="glass p-6 rounded-2xl">
+        <h3 class="font-bold text-green-900 mb-4">🧾 Historique des ajouts ({{ count }})</h3>
+        {% if entries %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="text-xs uppercase text-gray-500 border-b border-gray-400/30">
+                    <tr><th class="py-2">Date</th><th class="py-2 text-center">Quantité</th><th class="py-2">Notes</th></tr>
+                </thead>
+                <tbody class="divide-y divide-gray-400/20">
+                    {% for e in entries %}
+                    <tr class="hover:bg-white/30 transition">
+                        <td class="py-2 font-medium">{{ e.date }}</td>
+                        <td class="py-2 text-center font-mono">{{ e.quantity }} kg</td>
+                        <td class="py-2 text-gray-600 italic">{{ e.notes or '' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-gray-500 italic">Aucun ajout pour cette culture.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    const ctxPm = document.getElementById('chartPlantMonths').getContext('2d');
+    new Chart(ctxPm, {
+        type: 'bar',
+        data: {
+            labels: {{ month_labels | safe }},
+            datasets: [{
+                label: 'Quantité (kg)',
+                data: {{ monthly | safe }},
+                backgroundColor: 'rgba(34, 197, 94, 0.6)',
+                borderColor: 'rgba(34, 197, 94, 1)',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+</script>
+{% endblock %}
