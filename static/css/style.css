@@ -1,6 +1,4 @@
-/* Import de la police "Outfit" (Moderne et ronde) */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
-
+/* Police "Outfit" auto-hébergée via css/fonts.css (aucun appel Google Fonts) */
 body {
     /* Fond avec voile sombre pour contraste */
     background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('../img/bg.jpg') no-repeat center center fixed;

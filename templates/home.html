@@ -83,7 +83,7 @@
                     {% if p.image and p.image != 'default.jpg' %}
                     <img src="{{ url_for('static', filename='img/' + p.image) }}" alt="{{ p.name }}" class="w-full h-full object-cover" onerror="this.style.display='none'">
                     {% else %}
-                    <img src="https://image.pollinations.ai/prompt/cinematic%20photo%20of%20{{ p.name }}%20plant%20in%20a%20garden?width=400&height=300&nologo=true" alt="{{ p.name }}" class="w-full h-full object-cover">
+                    <img src="{{ url_for('static', filename='img/placeholder.svg') }}" alt="{{ p.name }}" class="w-full h-full object-cover">
                     {% endif %}
                     <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                     <span class="absolute bottom-2 left-2 px-2 py-1 bg-green-500/80 text-white rounded-full text-xs font-bold uppercase">{{ p.type }}</span>

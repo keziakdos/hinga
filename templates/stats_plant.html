@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='vendor/chart.js') }}"></script>
 
 <div class="max-w-5xl mx-auto space-y-6 pb-10">
     <a href="{{ url_for('stats') }}" class="inline-flex items-center gap-2 text-white bg-black/20 hover:bg-black/40 px-4 py-2 rounded-lg transition">
