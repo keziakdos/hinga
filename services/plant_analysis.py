@@ -35,6 +35,15 @@ def is_analysis_enabled() -> bool:
 
 PROMPT = """
 Tu es un expert botaniste. Analyse cette image.
+La plante peut être montrée en entier OU par une partie seulement :
+feuilles, fruits, fleurs, tige, racines, semis. La prise de vue peut être
+de profil, à l'horizontale, vue d'en haut ou en plongée : identifie dans
+tous les cas à partir des indices visibles (forme et nervures des feuilles,
+aspect des fruits, fleurs, port de la plante).
+Si tu hésites entre plusieurs plantes, donne l'hypothèse la plus probable
+et baisse le confidence (ex: 55%). Ajoute dans advice quelle partie
+photographier pour confirmer (ex: "photographiez aussi les feuilles").
+Ne mets "Non identifié" dans le name QUE si aucune plante n'est visible.
 Réponds UNIQUEMENT au format JSON strict avec cette structure :
 {
     "name": "Nom commun (Nom latin)",
@@ -49,7 +58,7 @@ Réponds UNIQUEMENT au format JSON strict avec cette structure :
         "hardiness": "Résistance au froid/Climat"
     }
 }
-Si ce n'est pas une plante, mets "Non identifié" dans le name. En Français.
+En Français.
 """
 
 
