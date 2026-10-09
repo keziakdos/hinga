@@ -27,7 +27,7 @@
             {% if plant.image and plant.image != 'default.jpg' and plant.image is not none %}
                 <img src="{{ url_for('static', filename='img/' + plant.image) }}" alt="{{ plant.name }}" class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition duration-700">
             {% else %}
-                <img src="https://image.pollinations.ai/prompt/cinematic%20photo%20of%20{{ plant.name }}%20plant%20in%20a%20garden?width=800&height=1000&nologo=true" alt="{{ plant.name }}" class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition duration-700">
+                <img src="{{ url_for('static', filename='img/placeholder.svg') }}" alt="{{ plant.name }}" class="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition duration-700">
             {% endif %}
 
              <div class="absolute top-4 left-4 z-20">

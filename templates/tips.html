@@ -21,7 +21,7 @@
                           alt="{{ tip.title }}" 
                           class="w-full h-full object-cover transform hover:scale-110 transition duration-500">
                 {% else %}
-                     <img src="https://image.pollinations.ai/prompt/garden%20tip%20{{ tip.title }}?width=400&height=300&nologo=true" 
+                     <img src="{{ url_for('static', filename='img/placeholder.svg') }}" 
                           alt="{{ tip.title }}" 
                           class="w-full h-full object-cover transform hover:scale-110 transition duration-500">
                 {% endif %}

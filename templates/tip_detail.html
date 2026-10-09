@@ -17,7 +17,7 @@
         {% if tip.image and tip.image not in ['soil.jpg', 'water.jpg', 'mulch.jpg', 'rotation.jpg', 'bee.jpg', 'default_tip.jpg'] %}
             {% set tip_img = url_for('static', filename='img/' + tip.image) %}
         {% else %}
-            {% set tip_img = 'https://image.pollinations.ai/prompt/garden%20tip%20' + tip.title + '?width=800&height=400&nologo=true' %}
+            {% set tip_img = url_for('static', filename='img/placeholder.svg') %}
         {% endif %}
         <div class="cursor-zoom-in" onclick="openModal('{{ tip_img }}')" title="Cliquer pour agrandir">
             <img src="{{ tip_img }}" alt="{{ tip.title }}" class="w-full h-64 md:h-96 object-cover">
