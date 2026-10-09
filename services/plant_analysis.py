@@ -91,7 +91,9 @@ def _analyze_gemini(image_path: str) -> dict:
     model_name = os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
     model = genai.GenerativeModel(model_name)
     with Image.open(image_path) as img:
-        response = model.generate_content([PROMPT, img])
+        # Timeout explicite < délai worker : l'échec devient un message,
+        # jamais un worker tué (= Internal Server Error).
+        response = model.generate_content([PROMPT, img], request_options={"timeout": 45})
     return parse_json_response(getattr(response, "text", ""))
 
 
