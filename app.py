@@ -229,7 +229,7 @@ def login():
             session['username'] = user['username']
             session['role'] = user['role']
             flash(f'Bonjour {username} !')
-            return redirect(url_for('calendar'))
+            return redirect(url_for('index'))
         else:
             flash('Identifiants incorrects.')
     return render_template('login.html')
@@ -644,7 +644,7 @@ def monitor_delete(id):
 def admin_dashboard():
     if session.get('role') != 'admin':
         flash('Accès réservé aux administrateurs.')
-        return redirect(url_for('calendar'))
+        return redirect(url_for('index'))
     return render_template('admin/dashboard.html')
 
 # --- GESTION UTILISATEURS ---
