@@ -538,7 +538,11 @@ def maplante():
             flash('✅ Analyse approfondie terminée !')
 
         except Exception as e:
-            flash(f"Erreur IA : {str(e)}")
+            msg = str(e)
+            if 'timeout' in msg.lower() or 'deadline' in msg.lower():
+                flash("⏳ L'analyse prend trop de temps. Réessayez (photo plus légère, ou dans un moment).")
+            else:
+                flash(f"Erreur IA : {msg}")
             print(e)
 
     # Récupérer l'historique
