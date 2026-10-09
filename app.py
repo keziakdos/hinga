@@ -26,7 +26,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'changez-moi-en-local')
 
 from helpers import MOIS_FR, MOIS_FR_ABBR, mois_nom, periode_label, month_in_range, plants_for_month, PLANT_TYPES, unique_filename
 from services.images import save_tip_image, thumb_name, is_managed_image
-from services.plant_analysis import is_analysis_enabled, analyze_image
+from services.plant_analysis import is_analysis_enabled, analyze_image, downscaled_copy
 
 
 def _tip_thumb(image):
@@ -518,7 +518,13 @@ def maplante():
             return redirect(url_for('maplante'))
 
         try:
-            ai_json = analyze_image(filepath)
+            # Envoi d'une copie réduite (rapide) ; l'original reste archivé.
+            tmp_path = downscaled_copy(filepath)
+            try:
+                ai_json = analyze_image(tmp_path)
+            finally:
+                if os.path.exists(tmp_path):
+                    os.remove(tmp_path)
 
             result = {
                 "image_filename": filename,

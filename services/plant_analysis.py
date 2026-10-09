@@ -63,6 +63,26 @@ def parse_json_response(text: str) -> dict:
     return json.loads(text)
 
 
+# Copie réduite envoyée à l'IA : réponse bien plus rapide, pas de timeout worker.
+SEND_MAX_SIZE = (1024, 1024)
+
+
+def downscaled_copy(image_path: str) -> str:
+    """Copie JPEG réduite (max 1024 px) pour l'envoi à l'IA. L'original est conservé."""
+    import tempfile
+    from PIL import Image, ImageOps
+
+    img = Image.open(image_path)
+    img = ImageOps.exif_transpose(img)
+    img.thumbnail(SEND_MAX_SIZE, Image.LANCZOS)
+    if img.mode in ("RGBA", "LA", "P"):
+        img = img.convert("RGB")
+    fd, tmp = tempfile.mkstemp(suffix=".jpg", prefix="hinga_send_")
+    os.close(fd)
+    img.save(tmp, "JPEG", quality=80, optimize=True)
+    return tmp
+
+
 def _analyze_gemini(image_path: str) -> dict:
     import google.generativeai as genai
     from PIL import Image
