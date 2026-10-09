@@ -29,7 +29,7 @@
             <span class="font-bold text-green-800 text-lg">Cliquez ici pour analyser une plante</span>
             <p class="text-sm text-gray-500">Format JPG, PNG (Max 20Mo)</p>
             
-            <input type="file" name="file" accept="image/*" onchange="startLoadingAndSubmit()" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+            <input type="file" name="file" accept="image/*" onchange="startLoadingAndSubmit(this)" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
         </form>
     </div>
     {% endif %}
@@ -139,7 +139,35 @@
 </div>
 
 <script>
-    function startLoadingAndSubmit() {
+    // Réduit la photo côté navigateur (max 1600 px, JPEG) avant envoi :
+    // upload rapide même avec une photo de téléphone de plusieurs Mo.
+    function downscaleForUpload(file) {
+        return new Promise((resolve) => {
+            if (!file || file.size < 1024 * 1024 || !/^image\/(jpeg|png|webp)$/.test(file.type)) {
+                return resolve(file);
+            }
+            const img = new Image();
+            img.onload = () => {
+                const max = 1600;
+                let w = img.width, h = img.height;
+                URL.revokeObjectURL(img.src);
+                if (Math.max(w, h) <= max) return resolve(file);
+                const scale = max / Math.max(w, h);
+                w = Math.round(w * scale); h = Math.round(h * scale);
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                canvas.toBlob((blob) => {
+                    if (!blob) return resolve(file);
+                    resolve(new File([blob], (file.name || 'photo').replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }));
+                }, 'image/jpeg', 0.85);
+            };
+            img.onerror = () => resolve(file);
+            img.src = URL.createObjectURL(file);
+        });
+    }
+
+    async function startLoadingAndSubmit(input) {
         const loader = document.getElementById('loadingScreen');
         const text = document.getElementById('loadingText');
         const form = document.getElementById('uploadForm');
@@ -152,7 +180,17 @@
         setTimeout(() => { text.innerText = "Analyse des feuilles et des racines..."; }, 1500);
         setTimeout(() => { text.innerText = "Rédaction du diagnostic par l'IA..."; }, 3500);
 
-        // 3. Envoyer le formulaire
+        // 3. Alléger la photo si besoin, puis envoyer le formulaire
+        try {
+            if (input && input.files && input.files[0]) {
+                const light = await downscaleForUpload(input.files[0]);
+                if (light !== input.files[0]) {
+                    const dt = new DataTransfer();
+                    dt.items.add(light);
+                    input.files = dt.files;
+                }
+            }
+        } catch (e) { /* envoi de l'original en cas d'échec */ }
         form.submit();
     }
 </script>
