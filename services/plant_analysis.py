@@ -12,6 +12,11 @@ import json
 import os
 
 
+# Modèle Gemini (surchageable sans code : GEMINI_MODEL=...).
+# Valeur suivie d'après la recommandation de l'API elle-même.
+DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
+
+
 def active_provider():
     """Retourne 'gemini', 'openai' ou None (service inactif)."""
     if os.environ.get("PLANT_ANALYSIS_ENABLED", "0") != "1":
@@ -63,7 +68,8 @@ def _analyze_gemini(image_path: str) -> dict:
     from PIL import Image
 
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model_name = os.environ.get("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+    model = genai.GenerativeModel(model_name)
     with Image.open(image_path) as img:
         response = model.generate_content([PROMPT, img])
     return parse_json_response(getattr(response, "text", ""))
