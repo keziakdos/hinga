@@ -1,0 +1,106 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8 pb-10">
+
+    <div class="glass p-8 rounded-3xl text-center">
+        <h1 class="text-4xl font-bold text-green-900 mb-2">🌱 Hinga</h1>
+        <p class="text-gray-700 text-lg">Votre potager assisté : que semer, que récolter, et quand.</p>
+        <div class="flex flex-wrap gap-3 justify-center mt-4">
+            <a href="{{ url_for('calendar') }}" class="px-5 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-white font-bold transition flex items-center gap-2"><i class="ph ph-calendar"></i> Calendrier</a>
+            <a href="{{ url_for('tips') }}" class="px-5 py-2 rounded-xl bg-white/50 hover:bg-white/80 text-green-800 font-bold transition flex items-center gap-2"><i class="ph ph-lightbulb"></i> Conseils</a>
+        </div>
+    </div>
+
+    <div class="glass p-6 rounded-2xl">
+        <h2 class="text-2xl font-bold text-green-900 mb-4">🧑‍🌾 À faire en {{ mois_actuel }}</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-green-100/40 p-4 rounded-xl border border-green-200/50">
+                <h3 class="font-bold text-green-900 mb-3 flex items-center gap-2"><i class="ph ph-seedling"></i> À semer ({{ semer_mtn|length }})</h3>
+                {% if semer_mtn %}
+                <ul class="space-y-2">
+                    {% for p in semer_mtn %}
+                    <li><a href="{{ url_for('plant_details', plant_id=p.id) }}" class="font-bold text-green-800 hover:underline">{{ p.name }}</a>
+                        <span class="text-xs text-gray-600"> — {{ periode_label(p.sow_start, p.sow_end) }}</span></li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-sm text-gray-600 italic">Rien à semer ce mois-ci.</p>
+                {% endif %}
+            </div>
+            <div class="bg-orange-100/40 p-4 rounded-xl border border-orange-200/50">
+                <h3 class="font-bold text-orange-900 mb-3 flex items-center gap-2"><i class="ph ph-basket"></i> À récolter ({{ recolter_mtn|length }})</h3>
+                {% if recolter_mtn %}
+                <ul class="space-y-2">
+                    {% for p in recolter_mtn %}
+                    <li><a href="{{ url_for('plant_details', plant_id=p.id) }}" class="font-bold text-orange-800 hover:underline">{{ p.name }}</a>
+                        <span class="text-xs text-gray-600"> — {{ periode_label(p.harvest_start, p.harvest_end) }}</span></li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-sm text-gray-600 italic">Rien à récolter ce mois-ci.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="glass p-6 rounded-2xl">
+        <h2 class="text-2xl font-bold text-green-900 mb-4">🔜 À préparer pour {{ mois_suivant }}</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-green-100/40 p-4 rounded-xl border border-green-200/50">
+                <h3 class="font-bold text-green-900 mb-3">Semis à préparer ({{ semer_bientot|length }})</h3>
+                {% if semer_bientot %}
+                <ul class="space-y-2">
+                    {% for p in semer_bientot %}
+                    <li><a href="{{ url_for('plant_details', plant_id=p.id) }}" class="font-bold text-green-800 hover:underline">{{ p.name }}</a></li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-sm text-gray-600 italic">Aucun semis ne démarre le mois prochain.</p>
+                {% endif %}
+            </div>
+            <div class="bg-orange-100/40 p-4 rounded-xl border border-orange-200/50">
+                <h3 class="font-bold text-orange-900 mb-3">Récoltes à venir ({{ recolter_bientot|length }})</h3>
+                {% if recolter_bientot %}
+                <ul class="space-y-2">
+                    {% for p in recolter_bientot %}
+                    <li><a href="{{ url_for('plant_details', plant_id=p.id) }}" class="font-bold text-orange-800 hover:underline">{{ p.name }}</a></li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-sm text-gray-600 italic">Aucune récolte ne démarre le mois prochain.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <h2 class="text-2xl font-bold text-green-900 mb-4 bg-white/30 p-3 rounded-xl backdrop-blur-md inline-block">🌿 Nos plantes ({{ plants|length }})</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for p in plants %}
+            <a href="{{ url_for('plant_details', plant_id=p.id) }}" class="glass rounded-2xl overflow-hidden hover:scale-[1.02] transition duration-300 flex flex-col h-full cursor-pointer">
+                <div class="h-40 overflow-hidden bg-gray-200 relative">
+                    {% if p.image and p.image != 'default.jpg' %}
+                    <img src="{{ url_for('static', filename='img/' + p.image) }}" alt="{{ p.name }}" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                    {% else %}
+                    <img src="https://image.pollinations.ai/prompt/cinematic%20photo%20of%20{{ p.name }}%20plant%20in%20a%20garden?width=400&height=300&nologo=true" alt="{{ p.name }}" class="w-full h-full object-cover">
+                    {% endif %}
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                    <span class="absolute bottom-2 left-2 px-2 py-1 bg-green-500/80 text-white rounded-full text-xs font-bold uppercase">{{ p.type }}</span>
+                </div>
+                <div class="p-4 flex-grow">
+                    <h3 class="text-lg font-bold text-green-900">{{ p.name }}</h3>
+                    <p class="text-xs text-gray-600 mt-1">🌱 {{ periode_label(p.sow_start, p.sow_end) }} · 🧺 {{ periode_label(p.harvest_start, p.harvest_end) }}</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="glass p-6 rounded-2xl border-t-4 border-yellow-400">
+        <h2 class="text-xl font-bold text-green-900 mb-2 flex items-center gap-2"><i class="ph ph-megaphone text-yellow-600"></i> 📢 Bientôt sur Hinga (V2)</h2>
+        <p class="text-gray-700 text-sm leading-relaxed">Messages de l'administrateur, annonces importantes et échanges entre jardiniers (dons, surplus de récoltes, semences) : cet espace d'information et de partage est en préparation.</p>
+    </div>
+
+</div>
+{% endblock %}
