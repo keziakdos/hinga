@@ -66,8 +66,13 @@ semences anciennes). Ce document cadre le périmètre, les règles et le plan.
   pas de suppression unilatérale) ; note moyenne + badge « échangeur vérifié » (≥3).
 - Signalement (spam, vente, contenu inapproprié, no-show répété) → file de modération.
 - Admin : valider/suspendre annonces et comptes, journaliser les actions, tableau de
-  bord (annonces actives, signalements ouverts, nouveaux inscrits) ; réutiliser le
+  bord (annonces actives, signalements ouverts, nouveaux inscrits, origine et
+  fréquence des visites) ; réutiliser le
   socle admin V1 (rôles, activer/désactiver déjà en place).
+- Statistiques de visite temps réel (V1 : script `scripts/analyse_visites.sh` sur les
+  logs nginx — humains vs robots, fréquence, pages vues) : en V2, tableau de bord
+  admin intégré (origine des visiteurs, robots vs utilisateurs, fréquence par jour/
+  page), alimenté par un journal applicatif anonymisé (IP hachée, RGPD).
 
 ## 7. Vie privée, anti-spam, RGPD
 

@@ -22,7 +22,13 @@ client = OpenAI()
 
 # --- CONFIGURATION ---
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'changez-moi-en-local')
+_secret = os.environ.get('SECRET_KEY')
+if not _secret:
+    if os.environ.get('FLASK_ENV') == 'production':
+        raise RuntimeError('SECRET_KEY manquante : renseignez-la dans le .env (prod).')
+    _secret = 'dev-local-uniquement'
+    print('⚠️  SECRET_KEY absente : clé de développement (ne pas utiliser en production).')
+app.secret_key = _secret
 
 from helpers import MOIS_FR, MOIS_FR_ABBR, mois_nom, periode_label, month_in_range, plants_for_month, PLANT_TYPES, unique_filename
 from services.images import save_tip_image, thumb_name, is_managed_image
@@ -316,7 +322,13 @@ def harvests():
     if request.method == 'POST':
         plant_id = request.form['plant_id']
         date = request.form['date']
-        quantity = request.form['quantity']
+        try:
+            quantity = float(request.form['quantity'])
+            if quantity <= 0:
+                raise ValueError
+        except (ValueError, TypeError):
+            flash('Quantité invalide (nombre positif attendu).')
+            return redirect(url_for('harvests'))
         notes = request.form['notes']
         
         db.execute('INSERT INTO harvests (user_id, plant_id, date, quantity, notes) VALUES (?,?,?,?,?)',
