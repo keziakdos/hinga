@@ -1,51 +1,120 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="max-w-5xl mx-auto grid md:grid-cols-2 gap-8">
-    
-    <div class="glass p-6 rounded-2xl">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Utilisateurs existants</h2>
-        <ul class="space-y-2">
-            {% for u in users %}
-            <li class="flex justify-between items-center bg-white/40 p-3 rounded-lg">
-                <div>
-                    <span class="font-bold">{{ u.username }}</span>
-                    <span class="text-xs bg-gray-200 px-2 rounded">{{ u.role }}</span>
-                    {% if 'is_active' in u.keys() and u.is_active == 0 %}
-                    <span class="text-xs bg-red-200 text-red-800 px-2 rounded font-bold">désactivé</span>
-                    {% endif %}
-                    <span class="block text-xs text-gray-600">
-                        {% if 'first_name' in u.keys() %}{{ u.first_name }} {{ u.last_name }}{% endif %}{% if 'email' in u.keys() and u.email %} · {{ u.email }}{% endif %}
-                    </span>
-                </div>
-                <div class="flex gap-3 items-center">
-                    <a href="{{ url_for('admin.admin_edit_user', user_id=u.id) }}" class="text-blue-600 hover:text-blue-800" title="Modifier">
-                        <i class="ph ph-pencil"></i>
-                    </a>
-                    {% if u.id != session['user_id'] %}
-                    <a href="{{ url_for('admin.admin_delete_user', user_id=u.id) }}" class="text-red-600 hover:text-red-800" onclick="return confirm('Sûr ?')">
-                        <i class="ph ph-trash"></i>
-                    </a>
-                    {% endif %}
+<div class="max-w-6xl mx-auto space-y-8">
+
+    <div class="flex flex-wrap gap-3 justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-800">Membres & demandes</h1>
+        <a href="{{ url_for('admin.admin_audit') }}" class="bg-white/50 hover:bg-white/80 text-gray-800 px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2"><i class="ph ph-scroll"></i> Journal d'audit</a>
+    </div>
+
+    {% if pending %}
+    <div class="glass p-6 rounded-2xl border-t-4 border-yellow-400">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">⏳ Demandes en attente ({{ pending|length }})</h2>
+        <ul class="space-y-3">
+            {% for u in pending %}
+            <li class="bg-white/40 p-4 rounded-lg">
+                <div class="font-bold">{{ u.username }} <span class="text-xs text-gray-600 font-normal">{{ u.first_name }} {{ u.last_name }} · {{ u.email }} · {{ u.zone }}</span></div>
+                {% if u.presentation %}<p class="text-sm text-gray-600 italic mt-1">{{ u.presentation }}</p>{% endif %}
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <form method="POST" action="{{ url_for('admin.admin_user_status', user_id=u.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="do" value="approve">
+                        <button class="bg-green-700 text-white px-4 py-1 rounded-lg font-bold text-sm">Approuver</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin.admin_user_status', user_id=u.id) }}" class="flex gap-2 flex-grow">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="do" value="refuse">
+                        <input type="text" name="motif" placeholder="Motif du refus (optionnel)" class="flex-grow p-1 rounded bg-white/50 border border-white/30 text-sm">
+                        <button class="bg-red-100 text-red-700 border border-red-300 px-4 py-1 rounded-lg font-bold text-sm" onclick="return confirm('Refuser {{ u.username }} ?')">Refuser</button>
+                    </form>
                 </div>
             </li>
             {% endfor %}
         </ul>
     </div>
+    {% endif %}
 
-    <div class="glass p-6 rounded-2xl h-fit">
-        <h2 class="text-xl font-bold text-green-900 mb-4">Créer un utilisateur</h2>
-        <form method="POST" class="space-y-4">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="text" name="username" placeholder="Identifiant *" required class="w-full p-2 rounded bg-white/50 border border-white/30">
-            <input type="password" name="password" placeholder="Mot de passe *" required class="w-full p-2 rounded bg-white/50 border border-white/30">
-            <div class="grid grid-cols-2 gap-4">
-                <input type="text" name="first_name" placeholder="Prénom" class="w-full p-2 rounded bg-white/50 border border-white/30">
-                <input type="text" name="last_name" placeholder="Nom" class="w-full p-2 rounded bg-white/50 border border-white/30">
+    <div class="grid md:grid-cols-2 gap-8">
+        <div class="glass p-6 rounded-2xl">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Membres approuvés ({{ members|length }})</h2>
+            <ul class="space-y-2">
+                {% for u in members %}
+                <li class="flex justify-between items-center bg-white/40 p-3 rounded-lg">
+                    <div>
+                        <span class="font-bold">{{ u.username }}</span>
+                        <span class="text-xs bg-gray-200 px-2 rounded">{{ u.role }}</span>
+                        <span class="block text-xs text-gray-600">{{ u.first_name }} {{ u.last_name }}{% if u.email %} · {{ u.email }}{% endif %}{% if u.zone %} · {{ u.zone }}{% endif %}</span>
+                    </div>
+                    <div class="flex gap-3 items-center">
+                        <a href="{{ url_for('admin.admin_edit_user', user_id=u.id) }}" class="text-blue-600" title="Modifier"><i class="ph ph-pencil"></i></a>
+                        {% if u.id != session['user_id'] %}
+                        <form method="POST" action="{{ url_for('admin.admin_user_status', user_id=u.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="do" value="suspend">
+                            <button class="text-orange-600 font-bold text-xs" title="Suspendre" onclick="return confirm('Suspendre {{ u.username }} ?')">Suspendre</button>
+                        </form>
+                        <a href="{{ url_for('admin.admin_delete_user', user_id=u.id) }}" class="text-red-600" onclick="return confirm('Supprimer {{ u.username }} ?')"><i class="ph ph-trash"></i></a>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="space-y-8">
+            {% if suspended %}
+            <div class="glass p-6 rounded-2xl border-t-4 border-red-400">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Suspendus ({{ suspended|length }})</h2>
+                <ul class="space-y-2">
+                    {% for u in suspended %}
+                    <li class="flex justify-between items-center bg-white/40 p-3 rounded-lg">
+                        <span class="font-bold">{{ u.username }}</span>
+                        <form method="POST" action="{{ url_for('admin.admin_user_status', user_id=u.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="do" value="reactivate">
+                            <button class="bg-green-700 text-white px-3 py-1 rounded-lg font-bold text-xs">Réactiver</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
             </div>
-            <input type="email" name="email" placeholder="Email" class="w-full p-2 rounded bg-white/50 border border-white/30">
-            <textarea name="notes" rows="2" placeholder="Notes (optionnel)" class="w-full p-2 rounded bg-white/50 border border-white/30"></textarea>
-            <button type="submit" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold">Créer</button>
-        </form>
+            {% endif %}
+
+            {% if refused %}
+            <div class="glass p-6 rounded-2xl">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Refusés ({{ refused|length }})</h2>
+                <ul class="space-y-2">
+                    {% for u in refused %}
+                    <li class="flex justify-between items-center bg-white/40 p-3 rounded-lg">
+                        <div><span class="font-bold">{{ u.username }}</span>
+                        <span class="block text-xs text-gray-600">{% if u.motif %}{{ u.motif }}{% endif %}</span></div>
+                        <form method="POST" action="{{ url_for('admin.admin_user_status', user_id=u.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="do" value="approve">
+                            <button class="text-green-700 font-bold text-xs">Approuver quand même</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <div class="glass p-6 rounded-2xl h-fit">
+                <h2 class="text-xl font-bold text-green-900 mb-4">Créer un utilisateur</h2>
+                <form method="POST" class="space-y-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="text" name="username" placeholder="Identifiant *" required class="w-full p-2 rounded bg-white/50 border border-white/30">
+                    <input type="password" name="password" placeholder="Mot de passe (8 min.) *" required class="w-full p-2 rounded bg-white/50 border border-white/30">
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="text" name="first_name" placeholder="Prénom" class="w-full p-2 rounded bg-white/50 border border-white/30">
+                        <input type="text" name="last_name" placeholder="Nom" class="w-full p-2 rounded bg-white/50 border border-white/30">
+                    </div>
+                    <input type="email" name="email" placeholder="Email" class="w-full p-2 rounded bg-white/50 border border-white/30">
+                    <textarea name="notes" rows="2" placeholder="Notes (optionnel)" class="w-full p-2 rounded bg-white/50 border border-white/30"></textarea>
+                    <button type="submit" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold">Créer</button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

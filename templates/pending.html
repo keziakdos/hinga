@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-xl mx-auto text-center">
+    <div class="glass p-10 rounded-3xl">
+        <div class="text-6xl mb-4">🌱</div>
+        {% if status == 'pending' %}
+        <h1 class="text-2xl font-bold text-green-900 mb-2">Inscription en attente de validation</h1>
+        <p class="text-gray-600">Un administrateur va examiner votre demande. Revenez un peu plus tard !</p>
+        {% elif status == 'refused' %}
+        <h1 class="text-2xl font-bold text-red-900 mb-2">Inscription refusée</h1>
+        <p class="text-gray-600">{% if motif %}Motif : {{ motif }}{% else %}Votre demande n'a pas été retenue.{% endif %}</p>
+        {% elif status == 'suspended' %}
+        <h1 class="text-2xl font-bold text-red-900 mb-2">Compte suspendu</h1>
+        <p class="text-gray-600">{% if motif %}Motif : {{ motif }}{% else %}Contactez un administrateur.{% endif %}</p>
+        {% endif %}
+        <a href="{{ url_for('auth.logout') }}" class="inline-block mt-6 px-5 py-2 rounded-xl bg-white/50 hover:bg-white/80 text-green-800 font-bold transition">Se déconnecter</a>
+    </div>
+</div>
+{% endblock %}

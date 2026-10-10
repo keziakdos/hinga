@@ -18,7 +18,10 @@ une V2 communautaire (partage/échange/don) — voir `docs/V2-proposition.md`.
 - **Récoltes + Stats** : historique avec photos, production par année/mois/semaine/plante,
   fiche par culture (meilleure période), estimations des récoltes à venir.
 - **Ma Plante** : upload photo → analyse IA (Gemini gratuit ou OpenAI, désactivée par défaut).
-- **Admin** : plantes, conseils + catégories, utilisateurs (rôles, actif/inactif).
+- **Admin** : plantes, conseils + catégories, membres (approbation des inscriptions,
+  rôles membre/modérateur/admin, suspension, journal d'audit).
+- **Comptes (V2.1)** : inscription publique (pseudo, email, zone sans adresse exacte,
+  charte acceptée) → validation admin ; compte en attente limité au message d'attente.
 
 ## 2. Installation en local (essai)
 

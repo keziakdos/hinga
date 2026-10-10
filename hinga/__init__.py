@@ -53,6 +53,34 @@ app.register_blueprint(garden.bp)
 app.register_blueprint(admin.bp)
 
 
+@app.before_request
+def check_account_status():
+    """Comptes non approuvés : seul le message d'attente (+ déconnexion)."""
+    from flask import redirect, request, session, url_for, flash
+    from hinga.db import get_db
+    if request.endpoint in (None, 'static'):
+        return None
+    if 'user_id' not in session:
+        return None
+    if request.endpoint in ('auth.login', 'auth.logout', 'auth.pending',
+                            'auth.register', 'auth.password_help', 'auth.charte'):
+        return None
+    db = get_db()
+    user = db.execute('SELECT status, is_active FROM users WHERE id=?',
+                      (session['user_id'],)).fetchone()
+    if user is None:
+        session.clear()
+        return redirect(url_for('auth.login'))
+    if not user['is_active']:
+        session.clear()
+        flash('Compte désactivé. Contactez un administrateur.')
+        return redirect(url_for('auth.login'))
+    session['status'] = user['status']
+    if user['status'] != 'approved':
+        return redirect(url_for('auth.pending'))
+    return None
+
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
