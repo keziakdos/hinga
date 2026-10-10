@@ -55,6 +55,7 @@
                         <span class="font-bold">{{ u.username }}</span>
                         <span class="text-xs bg-gray-200 px-2 rounded">{{ u.role }}</span>
                         <span class="block text-xs text-gray-600">{{ u.first_name }} {{ u.last_name }}{% if u.email %} · {{ u.email }}{% endif %}{% if u.zone %} · {{ u.zone }}{% endif %}</span>
+                        <span class="block text-xs text-gray-500 italic">{% if approvals.get(u.id) %}{% if approvals[u.id].action == 'user_create' %}Créé{% else %}Approuvé{% endif %} par {{ approvals[u.id].actor }} le {{ approvals[u.id].date }}{% else %}Ancien compte (avant suivi){% endif %}</span>
                     </div>
                     <div class="flex gap-3 items-center">
                         <a href="{{ url_for('admin.admin_edit_user', user_id=u.id) }}" class="text-blue-600" title="Modifier"><i class="ph ph-pencil"></i></a>
