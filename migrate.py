@@ -225,6 +225,15 @@ def migrate(db_path: str) -> None:
             )"""
         )
 
+        # --- Annonces d'accueil (admin) ---
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS site_announcements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL, body TEXT DEFAULT '',
+                active INTEGER DEFAULT 1, created_at TEXT, updated_at TEXT
+            )"""
+        )
+
         # --- tip_categories + tips.category_id ---
         conn.execute(
             """CREATE TABLE IF NOT EXISTS tip_categories (

@@ -31,10 +31,16 @@ def index():
     recolter_bientot = [p for p in plants
                         if int(p['harvest_start']) == next_m
                         and not month_in_range(now_m, p['harvest_start'], p['harvest_end'])]
+    try:
+        annonces = db.execute("SELECT * FROM site_announcements WHERE active=1 "
+                              "ORDER BY id DESC LIMIT 3").fetchall()
+    except sqlite3.OperationalError:
+        annonces = []
     return render_template('home.html', plants=plants,
                            mois_actuel=MOIS_FR[now_m - 1], mois_suivant=MOIS_FR[next_m - 1],
                            semer_mtn=semer_mtn, recolter_mtn=recolter_mtn,
-                           semer_bientot=semer_bientot, recolter_bientot=recolter_bientot)
+                           semer_bientot=semer_bientot, recolter_bientot=recolter_bientot,
+                           annonces=annonces)
 
 @bp.route('/calendar')
 def calendar():

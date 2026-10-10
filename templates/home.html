@@ -106,10 +106,19 @@
         </div>
     </div>
 
+    {% if annonces %}
+    {% for a in annonces %}
+    <div class="glass p-6 rounded-2xl border-t-4 border-green-500">
+        <h2 class="text-xl font-bold text-green-900 mb-2 flex items-center gap-2"><i class="ph ph-megaphone text-green-600"></i> 📢 {{ a.title }}</h2>
+        <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-line">{{ a.body }}</p>
+    </div>
+    {% endfor %}
+    {% else %}
     <div class="glass p-6 rounded-2xl border-t-4 border-yellow-400">
         <h2 class="text-xl font-bold text-green-900 mb-2 flex items-center gap-2"><i class="ph ph-megaphone text-yellow-600"></i> 📢 Bientôt : le Hinga de poche</h2>
         <p class="text-gray-700 text-sm leading-relaxed">Application consultable hors connexion, fiches imprimables, et installation sur petit ordinateur (Raspberry Pi) pour les quartiers sans internet.</p>
     </div>
+    {% endif %}
 
 </div>
 {% endblock %}
