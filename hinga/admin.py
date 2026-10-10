@@ -583,3 +583,25 @@ def admin_delete_listing_category(cat_id):
         audit('lcat_delete', 'listing_category', cat_id, 'catégorie annonce supprimée')
         flash('Catégorie supprimée.')
     return redirect(url_for('admin.admin_listing_categories'))
+
+# --- INDICATEURS D'IMPACT (V2.4) ---
+@bp.route('/admin/impact')
+@login_required
+def admin_impact():
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    db = get_db()
+    impact = {}
+    try:
+        impact['membres'] = db.execute("SELECT COUNT(*) FROM users WHERE status='approved'").fetchone()[0]
+        impact['en_attente'] = db.execute("SELECT COUNT(*) FROM users WHERE status='pending'").fetchone()[0]
+        impact['annonces'] = db.execute("SELECT COUNT(*) FROM listings").fetchone()[0]
+        impact['annonces_terminees'] = db.execute("SELECT COUNT(*) FROM listings WHERE status='termine'").fetchone()[0]
+        impact['par_type'] = db.execute("SELECT kind, COUNT(*) FROM listings GROUP BY kind").fetchall()
+        impact['conversations'] = db.execute("SELECT COUNT(*) FROM conversations").fetchone()[0]
+        impact['messages'] = db.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
+        impact['billets'] = db.execute("SELECT COUNT(*) FROM journal_posts").fetchone()[0]
+        impact['avis'] = db.execute("SELECT COUNT(*), AVG(score) FROM ratings").fetchone()
+        impact['signalements'] = db.execute("SELECT COUNT(*) FROM reports WHERE status='open'").fetchone()[0]
+    except sqlite3.OperationalError:
+        pass
+    return render_template('admin/impact.html', impact=impact)

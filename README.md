@@ -25,6 +25,8 @@ une V2 communautaire (partage/échange/don) — voir `docs/V2-proposition.md`.
 - **Échanges (V2.2)** : annonces don/échange/recherche + photos, recherche et filtres,
   catégories gérables, signalements.
 - **Social (V2.3)** : profils publics, messagerie privée anti-spam, notifications internes.
+- **Journal + confiance (V2.4)** : fil de jardin (photo+texte, commentaires),
+  notation mutuelle post-échange (badge fiabilité), indicateurs d'impact admin.
 
 ## 2. Installation en local (essai)
 

@@ -22,6 +22,29 @@
             <input type="text" name="message" required maxlength="2000" placeholder="Écrire…" class="flex-grow p-2 rounded-xl bg-white/50 border border-white/30">
             <button class="px-5 py-2 rounded-xl bg-green-700 text-white font-bold">➤</button>
         </form>
+
+        {% if ratings %}
+        <div class="mt-4 space-y-2">
+            {% for r in ratings %}
+            <p class="text-sm bg-white/40 p-2 rounded-lg">⭐ {{ r.score }}/5 par <b>{{ r.author }}</b>{% if r.comment %} — {{ r.comment }}{% endif %}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if not my_rating %}
+        <form method="POST" action="{{ url_for('social.rate_partner', conv_id=conv.id) }}" class="mt-4 flex flex-wrap gap-2 items-center text-sm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label class="font-bold">Noter {{ other }} :</label>
+            <select name="score" class="p-2 rounded-lg bg-white/50 border border-white/30">
+                <option value="5">5 — Parfait</option>
+                <option value="4">4 — Bien</option>
+                <option value="3">3 — Correct</option>
+                <option value="2">2 — Décevant</option>
+                <option value="1">1 — À éviter</option>
+            </select>
+            <input type="text" name="comment" maxlength="300" placeholder="Commentaire (optionnel)" class="flex-grow p-2 rounded-lg bg-white/50 border border-white/30">
+            <button class="px-4 py-2 rounded-xl bg-yellow-600 text-white font-bold">Noter</button>
+        </form>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
