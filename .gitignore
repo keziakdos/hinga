@@ -11,4 +11,6 @@ backup/
 uploads/
 static/img/user_*.jpg
 static/img/temp_*.jpg
+static/img/*_page.*
+static/img/*_thumb.*
 oldversion/
