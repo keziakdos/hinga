@@ -13,8 +13,19 @@
         <ul class="space-y-3">
             {% for u in pending %}
             <li class="bg-white/40 p-4 rounded-lg">
-                <div class="font-bold">{{ u.username }} <span class="text-xs text-gray-600 font-normal">{{ u.first_name }} {{ u.last_name }} · {{ u.email }} · {{ u.zone }}</span></div>
-                {% if u.presentation %}<p class="text-sm text-gray-600 italic mt-1">{{ u.presentation }}</p>{% endif %}
+                <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span class="font-bold text-lg">{{ u.username }}</span>
+                    <span class="text-xs text-gray-500">demandé le {{ u.created_at or '—' }}</span>
+                </div>
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 mt-2 text-sm">
+                    <div><dt class="inline font-bold text-gray-700">Nom : </dt><dd class="inline text-gray-800">{{ u.first_name }} {{ u.last_name }}</dd></div>
+                    <div><dt class="inline font-bold text-gray-700">Email : </dt><dd class="inline text-gray-800">{{ u.email }}</dd></div>
+                    <div><dt class="inline font-bold text-gray-700">Zone : </dt><dd class="inline text-gray-800">{{ u.zone or '—' }}</dd></div>
+                    <div><dt class="inline font-bold text-gray-700">Charte : </dt><dd class="inline text-gray-800">{% if u.rules_accepted_at %}acceptée le {{ u.rules_accepted_at }}{% else %}non renseigné{% endif %}</dd></div>
+                    <div class="md:col-span-2"><dt class="inline font-bold text-gray-700">Présentation : </dt><dd class="inline text-gray-600 italic">{{ u.presentation or '—' }}</dd></div>
+                    <div><dt class="inline font-bold text-gray-700">Cherche : </dt><dd class="inline text-gray-800">{{ u.cherche or '—' }}</dd></div>
+                    <div><dt class="inline font-bold text-gray-700">Offre : </dt><dd class="inline text-gray-800">{{ u.offre or '—' }}</dd></div>
+                </dl>
                 <div class="flex flex-wrap gap-2 mt-3">
                     <form method="POST" action="{{ url_for('admin.admin_user_status', user_id=u.id) }}">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
