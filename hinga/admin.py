@@ -79,8 +79,22 @@ def admin_users():
     refused = db.execute("SELECT * FROM users WHERE status='refused' ORDER BY created_at DESC").fetchall()
     suspended = db.execute("SELECT * FROM users WHERE status='suspended' ORDER BY username").fetchall()
     members = db.execute("SELECT * FROM users WHERE status='approved' ORDER BY username").fetchall()
+    # Qui a approuvé / créé chaque membre, et quand (journal d'audit)
+    approvals = {}
+    try:
+        for r in db.execute("""SELECT a.target_id, a.action, a.created_at, u.username AS actor
+                               FROM audit_log a LEFT JOIN users u ON a.actor_id = u.id
+                               WHERE a.target_kind='user' AND a.action IN ('user_approve','user_create')
+                               ORDER BY a.id""").fetchall():
+            tid = r['target_id']
+            cur = approvals.get(tid)
+            if cur is None or (cur['action'] != 'user_approve' and r['action'] == 'user_approve'):
+                approvals[tid] = dict(actor=r['actor'] or '?', date=r['created_at'],
+                                      action=r['action'])
+    except sqlite3.OperationalError:
+        pass
     return render_template('admin/users.html', pending=pending, refused=refused,
-                           suspended=suspended, members=members)
+                           suspended=suspended, members=members, approvals=approvals)
 
 
 @bp.route('/admin/users/status/<int:user_id>', methods=['POST'])
