@@ -9,13 +9,14 @@ from hinga.auth import login_required
 from hinga.db import get_db
 from hinga.services.images import is_managed_image, thumb_name
 from hinga.services.images import save_tip_image
-from hinga.utils import _delete_managed_image, audit
+from hinga.utils import _delete_managed_image, audit, notify_admins
 
 bp = Blueprint('exchange', __name__)
 
 KINDS = (('don', 'Don'), ('echange', 'Échange'), ('recherche', 'Recherche'))
 KIND_LABELS = dict(KINDS)
-STATUSES = (('disponible', 'Disponible'), ('reserve', 'Réservé'), ('termine', 'Terminé'))
+STATUSES = (('disponible', 'Disponible'), ('reserve', 'Réservé'), ('termine', 'Terminé'),
+            ('masquee', 'Masquée (modération)'))
 STATUS_LABELS = dict(STATUSES)
 MAX_PHOTOS = 4
 
@@ -73,7 +74,7 @@ def exchanges():
     query = """SELECT l.*, c.name AS category_name, u.username AS owner
                FROM listings l
                LEFT JOIN listing_categories c ON l.category_id = c.id
-               JOIN users u ON l.user_id = u.id WHERE 1=1"""
+               JOIN users u ON l.user_id = u.id WHERE l.status != 'masquee'"""
     params = []
     if status in ('disponible', 'reserve', 'termine'):
         query += " AND l.status = ?"
@@ -122,9 +123,14 @@ def exchange_detail(listing_id):
     if row is None:
         flash("Annonce introuvable.")
         return redirect(url_for('exchange.exchanges'))
+    listing = dict(row)
+    if listing['status'] == 'masquee' and not (
+            ('user_id' in session) and (session['user_id'] == listing['user_id']
+                                        or session.get('role') in ('admin', 'moderateur'))):
+        flash("Annonce masquée par la modération.")
+        return redirect(url_for('exchange.exchanges'))
     db.execute("UPDATE listings SET views = views + 1 WHERE id = ?", (listing_id,))
     db.commit()
-    listing = dict(row)
     mine = 'user_id' in session and session['user_id'] == listing['user_id']
     return render_template('exchanges/detail.html', listing=listing,
                            photos=listing_photos(db, listing_id), mine=mine,
@@ -296,5 +302,7 @@ def exchange_report(listing_id):
                       VALUES (?,?,?,?,?, 'open', ?)""",
                    (session['user_id'], 'listing', listing_id, reason, details, _today()))
         db.commit()
+        notify_admins('signalement', f"Annonce #{listing_id} signalée ({reason})",
+                      '/admin/moderation')
         flash('Annonce signalée, merci. Un modérateur va l’examiner.')
     return redirect(url_for('exchange.exchange_detail', listing_id=listing_id))

@@ -337,6 +337,27 @@ def journal_delete(post_id):
     return redirect(url_for('social.journal'))
 
 
+@bp.route('/journal/<int:post_id>/signaler', methods=['POST'])
+@login_required
+def journal_report(post_id):
+    from hinga.utils import notify_admins
+    db = get_db()
+    reason = request.form.get('reason', '').strip()[:40] or 'Autre'
+    exists = db.execute("SELECT id FROM reports WHERE target_kind='journal' AND target_id=? "
+                        "AND reporter_id=? AND status='open'", (post_id, session['user_id'])).fetchone()
+    if exists:
+        flash('Vous avez déjà signalé ce billet.')
+    else:
+        db.execute("""INSERT INTO reports (reporter_id, target_kind, target_id, reason, details, status, created_at)
+                      VALUES (?,?,?,?, '', 'open', ?)""",
+                   (session['user_id'], 'journal', post_id, reason, _today()))
+        db.commit()
+        notify_admins('signalement', f"Billet de journal #{post_id} signalé ({reason})",
+                      '/admin/moderation')
+        flash('Billet signalé, merci.')
+    return redirect(url_for('social.journal_detail', post_id=post_id))
+
+
 @bp.route('/commentaire/<int:comment_id>/masquer')
 @login_required
 def comment_hide(comment_id):

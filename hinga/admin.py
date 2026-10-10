@@ -605,3 +605,91 @@ def admin_impact():
     except sqlite3.OperationalError:
         pass
     return render_template('admin/impact.html', impact=impact)
+
+# --- MODERATION (V2.5 : signalements, masquer/supprimer) ---
+from hinga.auth import staff_required  # noqa: E402
+from hinga.utils import notify_admins  # noqa: E402
+
+
+@bp.route('/admin/moderation')
+@login_required
+@staff_required
+def admin_moderation():
+    db = get_db()
+    try:
+        reports = db.execute("""SELECT r.*, u1.username AS reporter, u2.username AS listing_owner,
+                                l.title AS listing_title, l.status AS listing_status,
+                                substr(j.text, 1, 120) AS journal_text
+                                FROM reports r
+                                LEFT JOIN users u1 ON r.reporter_id = u1.id
+                                LEFT JOIN listings l ON r.target_kind='listing' AND r.target_id = l.id
+                                LEFT JOIN users u2 ON l.user_id = u2.id
+                                LEFT JOIN journal_posts j ON r.target_kind='journal' AND r.target_id = j.id
+                                WHERE r.status='open' ORDER BY r.id DESC""").fetchall()
+    except sqlite3.OperationalError:
+        reports = []
+    return render_template('admin/moderation.html', reports=reports)
+
+
+@bp.route('/admin/signalements/<int:report_id>/clore', methods=['POST'])
+@login_required
+@staff_required
+def admin_report_close(report_id):
+    db = get_db()
+    db.execute("UPDATE reports SET status='closed' WHERE id=?", (report_id,))
+    db.commit()
+    audit('report_close', 'report', report_id, 'signalement classé sans suite')
+    flash('Signalement classé.')
+    return redirect(url_for('admin.admin_moderation'))
+
+
+@bp.route('/admin/signalements/<int:report_id>/masquer', methods=['POST'])
+@login_required
+@staff_required
+def admin_report_hide(report_id):
+    db = get_db()
+    rep = db.execute("SELECT * FROM reports WHERE id=?", (report_id,)).fetchone()
+    if rep is None:
+        return redirect(url_for('admin.admin_moderation'))
+    if rep['target_kind'] == 'listing':
+        db.execute("UPDATE listings SET status='masquee' WHERE id=?", (rep['target_id'],))
+        owner = db.execute('SELECT user_id FROM listings WHERE id=?', (rep['target_id'],)).fetchone()
+        if owner:
+            from hinga.utils import notify
+            notify(owner['user_id'], 'modération',
+                   'Votre annonce a été masquée par la modération.', f"/echanges/{rep['target_id']}")
+    db.execute("UPDATE reports SET status='closed' WHERE id=?", (report_id,))
+    db.commit()
+    audit('listing_hide', rep['target_kind'], rep['target_id'], f"masqué suite signalement #{report_id}")
+    flash('Contenu masqué.')
+    return redirect(url_for('admin.admin_moderation'))
+
+
+@bp.route('/admin/annonces/<int:listing_id>/demasquer', methods=['POST'])
+@login_required
+@staff_required
+def admin_listing_unhide(listing_id):
+    db = get_db()
+    db.execute("UPDATE listings SET status='disponible' WHERE id=?", (listing_id,))
+    db.commit()
+    audit('listing_unhide', 'listing', listing_id, 'annonce démasquée')
+    flash('Annonce de nouveau visible.')
+    return redirect(url_for('admin.admin_moderation'))
+
+
+@bp.route('/admin/annonces/<int:listing_id>/supprimer')
+@login_required
+def admin_listing_delete(listing_id):
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    db = get_db()
+    target = db.execute('SELECT title FROM listings WHERE id=?', (listing_id,)).fetchone()
+    for (fn,) in db.execute('SELECT filename FROM listing_photos WHERE listing_id=?', (listing_id,)).fetchall():
+        _delete_managed_image(fn)
+    db.execute('DELETE FROM listing_photos WHERE listing_id=?', (listing_id,))
+    db.execute('DELETE FROM listings WHERE id=?', (listing_id,))
+    db.execute("UPDATE reports SET status='closed' WHERE target_kind='listing' AND target_id=?", (listing_id,))
+    db.commit()
+    audit('listing_delete', 'listing', listing_id,
+          f"annonce {target['title'] if target else listing_id} supprimée (modération)")
+    flash('Annonce supprimée.')
+    return redirect(url_for('admin.admin_moderation'))

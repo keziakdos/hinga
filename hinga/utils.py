@@ -55,6 +55,17 @@ def notify(user_id, kind, title, link=''):
         pass
 
 
+def notify_admins(kind, title, link=''):
+    """Notifie tous les admins actifs (V2.5 : signalements)."""
+    from hinga.db import get_db
+    db = get_db()
+    try:
+        for (aid,) in db.execute("SELECT id FROM users WHERE role='admin' AND is_active=1").fetchall():
+            notify(aid, kind, title, link)
+    except Exception:
+        pass
+
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 

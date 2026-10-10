@@ -57,6 +57,11 @@
             <button type="submit" class="w-full bg-green-700 text-white py-3 rounded-xl font-bold">{% if listing %}Enregistrer{% else %}Publier{% endif %}</button>
         </form>
 
+        <div class="mt-4 p-4 bg-yellow-100/40 rounded-xl border border-yellow-300 text-xs text-gray-700 space-y-1">
+            <p><b>🍯 Nourriture / conserves :</b> indiquez ingrédients, date de fabrication et conservation. Échangez uniquement ce que vous mangeriez vous-même.</p>
+            <p><b>🌿 Plantes / graines :</b> vérifiez qu'il ne s'agit pas d'une espèce invasive ou interdite dans votre région ; pour les semences, précisez variété et année de récolte.</p>
+        </div>
+
         {% if listing and photos %}
         <div class="mt-6">
             <h3 class="font-bold text-gray-700 text-sm mb-2">Photos actuelles</h3>

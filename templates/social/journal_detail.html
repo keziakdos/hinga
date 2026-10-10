@@ -12,6 +12,11 @@
             <p class="text-xs text-gray-500 mt-2">Par <a href="{{ url_for('social.profile', username=post.author) }}" class="underline font-bold">{{ post.author }}</a> · {{ post.created_at }}</p>
             {% if session.get('user_id') == post.user_id or session.get('role') == 'admin' %}
             <a href="{{ url_for('social.journal_delete', post_id=post.id) }}" onclick="return confirm('Supprimer ce billet ?')" class="text-red-600 text-sm">Supprimer</a>
+            {% elif session.get('user_id') %}
+            <form method="POST" action="{{ url_for('social.journal_report', post_id=post.id) }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="text-xs text-gray-500 underline" onclick="return confirm('Signaler ce billet ?')">Signaler</button>
+            </form>
             {% endif %}
         </div>
     </article>
