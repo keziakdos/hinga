@@ -762,3 +762,90 @@ def admin_announcement_delete(item_id):
     audit('annonce_delete', 'announcement', item_id, 'annonce accueil supprimée')
     flash('Annonce supprimée.')
     return redirect(url_for('admin.admin_announcements'))
+
+# --- VISITES : HUMAINS / ROBOTS / TENTATIVES (V2, lecture logs nginx) ---
+import re as _re
+
+BOT_RE = _re.compile(r'bot|crawl|spider|slurp|mediapartners|baidu|yandex|sogou|exabot|facebot|'
+                     r'ia_archiver|gptbot|claudebot|ccbot|anthropic|semrush|ahrefs|mj12|dotbot|petal|'
+                     r'bytespider|python-requests|curl|wget|httpclient|axios|go-http|java/|libwww|'
+                     r'zgrab|masscan|nmap|shodan|censys', _re.I)
+PROBE_RE = _re.compile(r'/\.env|wp-admin|wp-login|phpmyadmin|\.git/|\.svn|xmlrpc\.php|shell\.php|'
+                       r'admin\.php|config\.php|\.bak$|\.sql$|console\.php', _re.I)
+ATTACK_RE = _re.compile(r'union\s+select|sleep\s*\(|benchmark\s*\(|\.\./|%2e%2e|etc/passwd|'
+                        r'<script|base64_decode|_query\[|GLOBALS\[', _re.I)
+COMBINED_RE = _re.compile(r'^(?P<ip>\S+) \S+ \S+ \[(?P<time>[^\]]+)\] "(?P<method>[A-Z]+) '
+                          r'(?P<path>\S+)[^"]*" (?P<status>\d{3}) (?P<size>\S+) "[^"]*" "(?P<ua>[^"]*)"')
+
+
+def _parse_visits(path, max_lines):
+    entries = []
+    try:
+        with open(path, 'r', errors='replace') as fh:
+            lines = fh.readlines()[-max_lines:]
+    except OSError:
+        return None
+    for line in lines:
+        m = COMBINED_RE.match(line)
+        if not m:
+            continue
+        d = m.groupdict()
+        ua = d['ua'] or ''
+        path_only = d['path'].split('?')[0]
+        is_bot = bool(BOT_RE.search(ua))
+        probe = bool(PROBE_RE.search(d['path']))
+        attack = bool(ATTACK_RE.search(d['path']))
+        try:
+            status = int(d['status'])
+        except ValueError:
+            status = 0
+        entries.append(dict(ip=d['ip'], time=d['time'], method=d['method'], path=d['path'][:120],
+                            status=status, ua=ua[:120], bot=is_bot, probe=probe, attack=attack,
+                            bad=status in (400, 403, 404)))
+    return entries
+
+
+@bp.route('/admin/visites')
+@login_required
+def admin_visits():
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    log_path = current_app.config.get('NGINX_ACCESS_LOG', '')
+    entries = _parse_visits(log_path, current_app.config.get('VISIT_MAX_LINES', 5000))
+    if entries is None:
+        return render_template('admin/visits.html', missing=log_path, stats=None)
+    humans = [e for e in entries if not e['bot']]
+    bots = [e for e in entries if e['bot']]
+    by_ip = {}
+    for e in entries:
+        s = by_ip.setdefault(e['ip'], {'n': 0, 'bad': 0, 'bot': False, 'probe': False, 'attack': False})
+        s['n'] += 1
+        s['bad'] += 1 if e['bad'] else 0
+        s['bot'] = s['bot'] or e['bot']
+        s['probe'] = s['probe'] or e['probe']
+        s['attack'] = s['attack'] or e['attack']
+    suspicious = []
+    for ip, s in by_ip.items():
+        reasons = []
+        if s['attack']:
+            reasons.append('attaque (injection/traversée)')
+        if s['probe']:
+            reasons.append('sonde (fichiers sensibles)')
+        if s['bad'] >= 10:
+            reasons.append(f"{s['bad']} erreurs 4xx")
+        if not s['bot'] and s['n'] >= 200:
+            reasons.append(f"{s['n']} requêtes (rafale ?)")
+        if reasons:
+            suspicious.append(dict(ip=ip, n=s['n'], bad=s['bad'], bot=s['bot'], reasons=reasons))
+    suspicious.sort(key=lambda x: -x['bad'])
+    pages = {}
+    for e in humans:
+        p = e['path'].split('?')[0]
+        if p.startswith('/'):
+            pages[p] = pages.get(p, 0) + 1
+    stats = dict(total=len(entries), humans=len(humans), bots=len(bots),
+                 ips=len(by_ip), suspicious=suspicious[:50],
+                 top_pages=sorted(pages.items(), key=lambda x: -x[1])[:15],
+                 top_ips=sorted(by_ip.items(), key=lambda x: -x[1]['n'])[:15],
+                 recent=[e for e in entries if e['probe'] or e['attack']][-30:][::-1],
+                 log_path=log_path)
+    return render_template('admin/visits.html', missing=None, stats=stats)

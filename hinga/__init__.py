@@ -48,6 +48,9 @@ def inject_helpers():
 basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static')
 app.config['DATABASE'] = os.path.join(basedir, 'hinga.db')
+app.config['NGINX_ACCESS_LOG'] = os.environ.get(
+    'NGINX_ACCESS_LOG', '/var/log/nginx/hinga.access.log')
+app.config['VISIT_MAX_LINES'] = int(os.environ.get('VISIT_MAX_LINES', '5000'))
 
 # Sessions : HttpOnly + SameSite stricts ; Secure en prod (SESSION_COOKIE_SECURE=1).
 app.config['SESSION_COOKIE_HTTPONLY'] = True
