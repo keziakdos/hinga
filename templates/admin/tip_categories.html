@@ -13,6 +13,7 @@
                 {% for c in categories %}
                 <li class="bg-white/40 p-3 rounded-lg">
                     <form method="POST" action="{{ url_for('admin.admin_edit_tip_category', cat_id=c.id) }}" class="flex gap-2 items-center">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="text" name="name" value="{{ c.name }}" required class="flex-grow p-2 rounded bg-white/50 border border-white/30">
                         <button type="submit" class="text-blue-600 px-2" title="Renommer"><i class="ph ph-check"></i></button>
                         <a href="{{ url_for('admin.admin_delete_tip_category', cat_id=c.id) }}" class="text-red-600 px-2" onclick="return confirm('Supprimer cette catégorie ? Les conseils seront conservés.')" title="Supprimer"><i class="ph ph-trash"></i></a>
@@ -27,6 +28,7 @@
         <div class="glass p-6 rounded-2xl h-fit">
             <h2 class="text-xl font-bold text-yellow-600 mb-4">Nouvelle catégorie</h2>
             <form method="POST" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="text" name="name" placeholder="Nom (ex: Compost)" required class="w-full p-2 rounded bg-white/50 border border-white/30">
                 <button type="submit" class="w-full bg-yellow-600 text-white py-2 rounded-lg font-bold">Créer</button>
             </form>

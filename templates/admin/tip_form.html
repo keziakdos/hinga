@@ -8,6 +8,7 @@
         </div>
 
         <form method="POST" enctype="multipart/form-data" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div>
                 <label class="font-bold text-gray-700 text-sm">Titre</label>
                 <input type="text" name="title" value="{{ tip.title }}" required class="w-full p-2 rounded bg-white/50 border border-white/30">

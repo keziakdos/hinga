@@ -10,7 +10,7 @@ from hinga.auth import login_required
 from hinga.db import get_db
 from hinga.helpers import MOIS_FR, PLANT_TYPES, unique_filename
 from hinga.services.images import is_managed_image, save_tip_image, thumb_name  # noqa: F401
-from hinga.utils import _delete_managed_image, _tip_thumb  # noqa: F401
+from hinga.utils import _delete_managed_image, _tip_thumb, allowed_file  # noqa: F401
 
 bp = Blueprint('admin', __name__)
 

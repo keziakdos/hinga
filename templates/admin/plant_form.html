@@ -11,6 +11,7 @@
        
 
         <form method="POST" enctype="multipart/form-data" class="space-y-8">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
             <div class="bg-white/40 p-6 rounded-2xl space-y-4">
                 <h2 class="text-xl font-bold text-green-800 mb-4 flex items-center gap-2"><i class="ph ph-identification-card"></i> Identité</h2>

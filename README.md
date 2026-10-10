@@ -108,12 +108,15 @@ Lecture seule, sans dépendance. Un tableau de bord temps réel est prévu en V2
 
 - Requêtes SQL paramétrées ; échappement HTML auto (Jinja) ; uploads validés
   (type réel, 10 Mo, noms uniques, miniatures) ; mots de passe hashés ;
+  protection **CSRF** sur tous les formulaires ; **rate-limit** anti-brute-force
+  sur la connexion (20/min, page 429) ; cookies `HttpOnly` + `SameSite=Lax`
+  (`Secure` activable via `SESSION_COOKIE_SECURE=1` en HTTPS) ;
   `SECRET_KEY` via `.env` (démarrage prod refusé sans) ; `.env`/`*.db` jamais dans git
-  (vérifié sur tout l'historique) ; page 500 dédiée ; sauvegardes chiffrées par droits (600).
+  (vérifié sur tout l'historique) ; pages 404/429/500 dédiées.
 - **À faire côté opérateur** : `SECRET_KEY` longue et unique, HTTPS forcé, compte
   `admin` par défaut renommé/désactivé après création de vos comptes, backups testés.
-- **Prévu V2** : protection CSRF (Flask-WTF), limitation de débit login (Flask-Limiter),
-  politique de mot de passe, en-têtes de sécurité (CSP/HSTS) côté frontal.
+- **Prévu V2** : politique de mot de passe, en-têtes de sécurité (CSP/HSTS) côté frontal,
+  stockage persistant du rate-limit (au lieu de la mémoire par worker).
 
 ## 9. Structure
 

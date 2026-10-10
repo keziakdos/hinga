@@ -35,6 +35,7 @@
     <div class="glass p-6 rounded-2xl h-fit">
         <h2 class="text-xl font-bold text-green-900 mb-4">Créer un utilisateur</h2>
         <form method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="text" name="username" placeholder="Identifiant *" required class="w-full p-2 rounded bg-white/50 border border-white/30">
             <input type="password" name="password" placeholder="Mot de passe *" required class="w-full p-2 rounded bg-white/50 border border-white/30">
             <div class="grid grid-cols-2 gap-4">
