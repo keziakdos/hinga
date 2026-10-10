@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto pb-10">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Mes annonces</h1>
+        <div class="flex gap-3">
+            <a href="{{ url_for('exchange.exchanges') }}" class="text-gray-600 underline text-sm">Toutes les annonces</a>
+            <a href="{{ url_for('exchange.exchange_new') }}" class="bg-green-700 text-white px-4 py-2 rounded-lg font-bold text-sm">+ Nouvelle</a>
+        </div>
+    </div>
+    {% if listings %}
+    <ul class="space-y-3">
+        {% for l in listings %}
+        <li class="glass p-4 rounded-2xl flex gap-4 items-center">
+            {% if l.photo %}
+            <img src="{{ url_for('static', filename='img/' + l.photo) }}" class="w-16 h-16 object-cover rounded-lg shrink-0" onerror="this.style.display='none'">
+            {% else %}
+            <span class="w-16 h-16 flex items-center justify-center bg-green-100/60 rounded-lg text-2xl shrink-0">🌱</span>
+            {% endif %}
+            <div class="flex-grow">
+                <a href="{{ url_for('exchange.exchange_detail', listing_id=l.id) }}" class="font-bold text-green-800 hover:underline">{{ l.title }}</a>
+                <span class="block text-xs text-gray-600">{{ l.category_name or 'Sans catégorie' }} · {{ l.status }} · {{ l.created_at }}</span>
+            </div>
+            <a href="{{ url_for('exchange.exchange_edit', listing_id=l.id) }}" class="text-blue-600 text-sm font-bold shrink-0">Modifier</a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-center text-gray-500 italic glass p-8 rounded-2xl">Vous n'avez pas encore d'annonce.</p>
+    {% endif %}
+</div>
+{% endblock %}

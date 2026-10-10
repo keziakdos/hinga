@@ -47,10 +47,11 @@ limiter = Limiter(get_remote_address, app=app)
 from hinga.db import close_connection  # noqa: E402
 app.teardown_appcontext(close_connection)
 
-from hinga import auth, garden, admin  # noqa: E402
+from hinga import auth, garden, admin, exchange  # noqa: E402
 app.register_blueprint(auth.bp)
 app.register_blueprint(garden.bp)
 app.register_blueprint(admin.bp)
+app.register_blueprint(exchange.bp)
 
 
 @app.before_request

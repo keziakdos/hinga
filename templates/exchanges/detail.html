@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto pb-10">
+    <a href="{{ url_for('exchange.exchanges') }}" class="inline-flex items-center gap-2 text-white bg-black/20 hover:bg-black/40 px-4 py-2 rounded-lg mb-4 transition">
+        <i class="ph ph-arrow-left"></i> Retour aux annonces
+    </a>
+
+    <article class="glass rounded-3xl overflow-hidden">
+        {% if photos %}
+        <img src="{{ url_for('static', filename='img/' + photos[0].filename) }}" alt="{{ listing.title }}" class="w-full h-64 md:h-96 object-cover" onerror="this.style.display='none'">
+        {% if photos|length > 1 %}
+        <div class="flex gap-2 p-3 overflow-x-auto">
+            {% for p in photos[1:] %}
+            <img src="{{ url_for('static', filename='img/' + p.thumb) }}" alt="" class="w-20 h-20 object-cover rounded-lg" onerror="this.style.display='none'">
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <div class="p-8">
+            <div class="flex flex-wrap gap-2 mb-3">
+                <span class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-bold uppercase">{{ kinds.get(listing.kind, listing.kind) }}</span>
+                {% if listing.category_name %}
+                <span class="px-3 py-1 bg-yellow-500/20 text-yellow-800 rounded-full text-xs font-bold uppercase">{{ listing.category_name }}</span>
+                {% endif %}
+                <span class="px-3 py-1 {% if listing.status == 'disponible' %}bg-green-100 text-green-800{% else %}bg-gray-200 text-gray-600{% endif %} rounded-full text-xs font-bold uppercase">{{ listing.status }}</span>
+            </div>
+            <h1 class="text-3xl font-bold text-green-900 mb-2">{{ listing.title }}</h1>
+            <p class="text-sm text-gray-500 mb-4">Par <b>{{ listing.owner }}</b>{% if listing.zone %} · Zone : {{ listing.zone }}{% endif %}{% if listing.quantity %} · Quantité : {{ listing.quantity }}{% endif %}</p>
+            <div class="text-gray-800 leading-relaxed whitespace-pre-line">{{ listing.description }}</div>
+            {% if listing.available_until %}
+            <p class="text-sm text-gray-500 mt-4">Disponible jusqu'au {{ listing.available_until }}</p>
+            {% endif %}
+
+            <div class="flex flex-wrap gap-3 mt-6">
+                {% if mine or session.get('role') == 'admin' %}
+                <a href="{{ url_for('exchange.exchange_edit', listing_id=listing.id) }}" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-sm">Modifier</a>
+                {% if listing.status == 'disponible' %}
+                <form method="POST" action="{{ url_for('exchange.exchange_done', listing_id=listing.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="px-4 py-2 rounded-xl bg-green-700 text-white font-bold text-sm">Marquer terminée</button>
+                </form>
+                {% endif %}
+                {% endif %}
+                {% if session.get('user_id') and not mine %}
+                <form method="POST" action="{{ url_for('exchange.exchange_report', listing_id=listing.id) }}" class="flex gap-2 items-center">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <select name="reason" class="p-2 rounded-lg bg-white/50 border border-white/30 text-sm">
+                        <option>Contenu inapproprié</option>
+                        <option>Vente déguisée</option>
+                        <option>Spam</option>
+                        <option>Autre</option>
+                    </select>
+                    <button class="px-3 py-2 rounded-xl bg-white/50 hover:bg-red-100 text-red-700 font-bold text-sm" onclick="return confirm('Signaler cette annonce ?')">Signaler</button>
+                </form>
+                {% endif %}
+            </div>
+
+            <div class="mt-6 p-4 bg-yellow-100/40 rounded-xl border border-yellow-300 text-sm text-gray-700">
+                <b>🤝 Échange en confiance :</b> ne communiquez jamais votre adresse exacte ici.
+                Convenez d'un lieu public en privé. La messagerie interne arrive à l'étape 3 ;
+                en attendant, contactez le jardinier via un administrateur.
+            </div>
+        </div>
+    </article>
+</div>
+{% endblock %}
