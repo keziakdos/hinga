@@ -97,9 +97,18 @@
         </div>
     </div>
 
+    <div class="glass p-6 rounded-2xl border-t-4 border-green-400">
+        <h2 class="text-xl font-bold text-green-900 mb-2 flex items-center gap-2"><i class="ph ph-handshake text-green-600"></i> 🤝 L'échange est ouvert !</h2>
+        <p class="text-gray-700 text-sm leading-relaxed mb-3">Dons, échanges et recherches entre jardiniers, journal du potager et messagerie : la communauté Hinga partage déjà.</p>
+        <div class="flex flex-wrap gap-3">
+            <a href="{{ url_for('exchange.exchanges') }}" class="px-4 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-white font-bold text-sm transition">Voir les annonces</a>
+            <a href="{{ url_for('social.journal') }}" class="px-4 py-2 rounded-xl bg-white/50 hover:bg-white/80 text-green-800 font-bold text-sm transition">Lire le journal</a>
+        </div>
+    </div>
+
     <div class="glass p-6 rounded-2xl border-t-4 border-yellow-400">
-        <h2 class="text-xl font-bold text-green-900 mb-2 flex items-center gap-2"><i class="ph ph-megaphone text-yellow-600"></i> 📢 Bientôt sur Hinga (V2)</h2>
-        <p class="text-gray-700 text-sm leading-relaxed">Messages de l'administrateur, annonces importantes et échanges entre jardiniers (dons, surplus de récoltes, semences) : cet espace d'information et de partage est en préparation.</p>
+        <h2 class="text-xl font-bold text-green-900 mb-2 flex items-center gap-2"><i class="ph ph-megaphone text-yellow-600"></i> 📢 Bientôt : le Hinga de poche</h2>
+        <p class="text-gray-700 text-sm leading-relaxed">Application consultable hors connexion, fiches imprimables, et installation sur petit ordinateur (Raspberry Pi) pour les quartiers sans internet.</p>
     </div>
 
 </div>
