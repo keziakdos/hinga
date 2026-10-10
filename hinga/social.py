@@ -48,8 +48,10 @@ def profile(username):
             avatar = _tip_thumb(user['avatar'])
     except (KeyError, IndexError):
         pass
+    rating_count, rating_avg = user_rating(db, user['id'])
     return render_template('social/profile.html', user=user, avatar=avatar,
-                           active=active, done=done, annonces=annonces)
+                           active=active, done=done, annonces=annonces,
+                           rating_count=rating_count, rating_avg=rating_avg)
 
 
 @bp.route('/mon-profil', methods=['GET', 'POST'])
@@ -194,8 +196,14 @@ def thread(conv_id):
     listing = None
     if conv['listing_id']:
         listing = db.execute('SELECT id, title FROM listings WHERE id=?', (conv['listing_id'],)).fetchone()
+    ratings = db.execute("""SELECT r.*, u.username AS author FROM ratings r
+                            JOIN users u ON r.author_id = u.id
+                            WHERE r.conversation_id=? ORDER BY r.id""", (conv_id,)).fetchall()
+    my_rating = db.execute("SELECT id FROM ratings WHERE conversation_id=? AND author_id=?",
+                           (conv_id, me)).fetchone()
     return render_template('social/thread.html', conv=conv, messages=msgs,
-                           other=other['username'] if other else '?', listing=listing)
+                           other=other['username'] if other else '?', listing=listing,
+                           ratings=ratings, my_rating=my_rating)
 
 
 @bp.route('/notifications')
@@ -220,3 +228,164 @@ def notifications_read():
     except sqlite3.OperationalError:
         pass
     return redirect(url_for('social.notifications'))
+
+
+# --- JOURNAL DE JARDIN (V2.4) ---
+@bp.route('/journal')
+def journal():
+    db = get_db()
+    try:
+        posts = db.execute("""SELECT p.*, u.username AS author FROM journal_posts p
+                              JOIN users u ON p.user_id = u.id
+                              ORDER BY p.id DESC LIMIT 30""").fetchall()
+        out = []
+        for p in posts:
+            d = dict(p)
+            d['n_comments'] = db.execute("SELECT COUNT(*) FROM post_comments "
+                                         "WHERE post_id=? AND hidden=0", (p['id'],)).fetchone()[0]
+            out.append(d)
+    except sqlite3.OperationalError:
+        out = []
+    return render_template('social/journal.html', posts=out)
+
+
+@bp.route('/journal/nouveau', methods=['GET', 'POST'])
+@login_required
+def journal_new():
+    db = get_db()
+    if request.method == 'POST':
+        text = request.form.get('text', '').strip()[:1000]
+        if not text:
+            flash('Texte vide.')
+            return redirect(url_for('social.journal_new'))
+        photo = ''
+        if 'photo' in request.files:
+            file = request.files['photo']
+            if file and file.filename:
+                page, error = save_tip_image(file, current_app.config['UPLOAD_FOLDER'] + '/img')
+                if error:
+                    flash(error)
+                    return redirect(url_for('social.journal_new'))
+                photo = page
+        import uuid as uuidlib
+        cur = db.execute("INSERT INTO journal_posts (uuid, user_id, text, photo, created_at) "
+                         "VALUES (?,?,?,?,?)",
+                         (uuidlib.uuid4().hex, session['user_id'], text, photo, _now()))
+        db.commit()
+        audit_log('journal_create', 'journal_post', cur.lastrowid, 'billet publié')
+        return redirect(url_for('social.journal_detail', post_id=cur.lastrowid))
+    return render_template('social/journal_new.html')
+
+
+def audit_log(action, target_kind='', target_id=None, details=''):
+    from hinga.utils import audit
+    try:
+        audit(action, target_kind, target_id, details)
+    except sqlite3.OperationalError:
+        pass
+
+
+@bp.route('/journal/<int:post_id>', methods=['GET', 'POST'])
+def journal_detail(post_id):
+    db = get_db()
+    post = db.execute("""SELECT p.*, u.username AS author FROM journal_posts p
+                         JOIN users u ON p.user_id = u.id WHERE p.id=?""", (post_id,)).fetchone()
+    if post is None:
+        flash("Billet introuvable.")
+        return redirect(url_for('social.journal'))
+    if request.method == 'POST':
+        if 'user_id' not in session:
+            flash("Connectez-vous pour commenter.")
+            return redirect(url_for('auth.login'))
+        body = request.form.get('comment', '').strip()[:500]
+        if body:
+            db.execute("INSERT INTO post_comments (post_id, author_id, body, created_at) "
+                       "VALUES (?,?,?,?)", (post_id, session['user_id'], body, _now()))
+            db.commit()
+            if post['user_id'] != session['user_id']:
+                notify(post['user_id'], 'commentaire',
+                       f"{session.get('username')} a commenté votre billet", f'/journal/{post_id}')
+        return redirect(url_for('social.journal_detail', post_id=post_id))
+    comments = db.execute("""SELECT c.*, u.username AS author FROM post_comments c
+                             JOIN users u ON c.author_id = u.id
+                             WHERE c.post_id=? AND c.hidden=0 ORDER BY c.id""", (post_id,)).fetchall()
+    can_moderate = 'user_id' in session and (session['user_id'] == post['user_id']
+                                             or session.get('role') == 'admin')
+    return render_template('social/journal_detail.html', post=post, comments=comments,
+                           can_moderate=can_moderate)
+
+
+@bp.route('/journal/<int:post_id>/supprimer')
+@login_required
+def journal_delete(post_id):
+    db = get_db()
+    post = db.execute('SELECT user_id FROM journal_posts WHERE id=?', (post_id,)).fetchone()
+    if post is None:
+        return redirect(url_for('social.journal'))
+    if session['user_id'] != post['user_id'] and session.get('role') != 'admin':
+        flash('Action interdite.')
+        return redirect(url_for('social.journal_detail', post_id=post_id))
+    photos = db.execute('SELECT photo FROM journal_posts WHERE id=?', (post_id,)).fetchone()
+    if photos and photos['photo']:
+        from hinga.utils import _delete_managed_image
+        _delete_managed_image(photos['photo'])
+    db.execute('DELETE FROM post_comments WHERE post_id=?', (post_id,))
+    db.execute('DELETE FROM journal_posts WHERE id=?', (post_id,))
+    db.commit()
+    audit_log('journal_delete', 'journal_post', post_id, 'billet supprimé')
+    flash('Billet supprimé.')
+    return redirect(url_for('social.journal'))
+
+
+@bp.route('/commentaire/<int:comment_id>/masquer')
+@login_required
+def comment_hide(comment_id):
+    db = get_db()
+    c = db.execute("""SELECT c.*, p.user_id AS owner FROM post_comments c
+                      JOIN journal_posts p ON c.post_id = p.id WHERE c.id=?""", (comment_id,)).fetchone()
+    if c is None:
+        return redirect(url_for('social.journal'))
+    if session['user_id'] not in (c['author_id'], c['owner']) and session.get('role') != 'admin':
+        flash('Action interdite.')
+        return redirect(url_for('social.journal_detail', post_id=c['post_id']))
+    db.execute('UPDATE post_comments SET hidden=1 WHERE id=?', (comment_id,))
+    db.commit()
+    flash('Commentaire masqué.')
+    return redirect(url_for('social.journal_detail', post_id=c['post_id']))
+
+
+# --- CONFIANCE MUTUELLE (V2.4) ---
+def user_rating(db, user_id):
+    row = db.execute("SELECT COUNT(*), AVG(score) FROM ratings WHERE target_id=?",
+                     (user_id,)).fetchone()
+    return (row[0], round(row[1], 1) if row[1] else None)
+
+
+@bp.route('/messages/<int:conv_id>/noter', methods=['POST'])
+@login_required
+def rate_partner(conv_id):
+    db = get_db()
+    me = session['user_id']
+    conv = db.execute('SELECT * FROM conversations WHERE id=?', (conv_id,)).fetchone()
+    if conv is None or me not in (conv['user_a'], conv['user_b']):
+        flash("Conversation introuvable.")
+        return redirect(url_for('social.inbox'))
+    try:
+        score = int(request.form.get('score', 0))
+    except (TypeError, ValueError):
+        score = 0
+    comment = request.form.get('comment', '').strip()[:300]
+    if score not in (1, 2, 3, 4, 5):
+        flash('Note entre 1 et 5.')
+        return redirect(url_for('social.thread', conv_id=conv_id))
+    other = conv['user_b'] if me == conv['user_a'] else conv['user_a']
+    try:
+        db.execute("INSERT INTO ratings (conversation_id, author_id, target_id, score, comment, created_at) "
+                   "VALUES (?,?,?,?,?,?)", (conv_id, me, other, score, comment, _now()))
+        db.commit()
+        notify(other, 'avis', f"{session.get('username')} vous a noté {score}/5",
+               f'/messages/{conv_id}')
+    except sqlite3.IntegrityError:
+        flash('Vous avez déjà noté cet échange.')
+        return redirect(url_for('social.thread', conv_id=conv_id))
+    return redirect(url_for('social.thread', conv_id=conv_id))

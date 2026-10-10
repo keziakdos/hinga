@@ -40,6 +40,12 @@
             <h2 class="text-xl font-bold text-gray-800">Journal d'audit</h2>
             <p class="text-sm text-gray-600">Qui a fait quoi, quand</p>
         </a>
+
+        <a href="{{ url_for('admin.admin_impact') }}" class="glass p-8 rounded-2xl hover:bg-white/40 transition group">
+            <i class="ph ph-globe-hemisphere-west text-5xl text-blue-600 mb-4 group-hover:scale-110 transition"></i>
+            <h2 class="text-xl font-bold text-gray-800">Impact</h2>
+            <p class="text-sm text-gray-600">Échanges, membres, avis</p>
+        </a>
     </div>
 </div>
 {% endblock %}

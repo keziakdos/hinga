@@ -15,6 +15,7 @@ Ne supprime rien. Ajoute uniquement :
   created_at) + jeu de départ ; listings + listing_photos ; reports
 - V2.3 social : users.avatar, users.jardin ; conversations, messages,
   notifications
+- V2.4 confiance : journal_posts, post_comments, ratings
 Sauvegarde auto dans backup/ avant toute écriture.
 """
 import argparse
@@ -194,6 +195,33 @@ def migrate(db_path: str) -> None:
                 user_id INTEGER NOT NULL, kind TEXT DEFAULT '',
                 title TEXT NOT NULL, link TEXT DEFAULT '',
                 read_at TEXT DEFAULT '', created_at TEXT
+            )"""
+        )
+
+        # --- V2.4 : journal de jardin + confiance mutuelle ---
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS journal_posts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                uuid TEXT DEFAULT '', user_id INTEGER NOT NULL,
+                text TEXT NOT NULL, photo TEXT DEFAULT '',
+                created_at TEXT
+            )"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS post_comments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                post_id INTEGER NOT NULL REFERENCES journal_posts(id) ON DELETE CASCADE,
+                author_id INTEGER NOT NULL, body TEXT NOT NULL,
+                hidden INTEGER DEFAULT 0, created_at TEXT
+            )"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS ratings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversation_id INTEGER NOT NULL, author_id INTEGER NOT NULL,
+                target_id INTEGER NOT NULL, score INTEGER NOT NULL,
+                comment TEXT DEFAULT '', created_at TEXT,
+                UNIQUE(conversation_id, author_id)
             )"""
         )
 

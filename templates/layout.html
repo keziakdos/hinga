@@ -23,6 +23,7 @@
             <li><a href="{{ url_for('garden.calendar') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-calendar"></i> <span class="hidden md:inline">Calendrier</span></a></li>
             <li><a href="{{ url_for('garden.tips') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-lightbulb"></i> <span class="hidden md:inline">Conseils</span></a></li>
             <li><a href="{{ url_for('exchange.exchanges') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-handshake"></i> <span class="hidden md:inline">Échanges</span></a></li>
+            <li><a href="{{ url_for('social.journal') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-notebook"></i> <span class="hidden md:inline">Journal</span></a></li>
 
             {% if session.get('user_id') %}
                 <li><a href="{{ url_for('garden.harvests') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-basket"></i> <span class="hidden md:inline">Récoltes</span></a></li>

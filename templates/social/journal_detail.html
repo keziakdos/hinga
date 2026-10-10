@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto pb-10">
+    <a href="{{ url_for('social.journal') }}" class="inline-flex items-center gap-2 text-white bg-black/20 hover:bg-black/40 px-4 py-2 rounded-lg mb-4 transition text-sm"><i class="ph ph-arrow-left"></i> Journal</a>
+
+    <article class="glass rounded-3xl overflow-hidden">
+        {% if post.photo %}
+        <img src="{{ url_for('static', filename='img/' + post.photo) }}" alt="" class="w-full max-h-96 object-cover" onerror="this.style.display='none'">
+        {% endif %}
+        <div class="p-6">
+            <p class="text-lg text-gray-800 leading-relaxed whitespace-pre-line">{{ post.text }}</p>
+            <p class="text-xs text-gray-500 mt-2">Par <a href="{{ url_for('social.profile', username=post.author) }}" class="underline font-bold">{{ post.author }}</a> · {{ post.created_at }}</p>
+            {% if session.get('user_id') == post.user_id or session.get('role') == 'admin' %}
+            <a href="{{ url_for('social.journal_delete', post_id=post.id) }}" onclick="return confirm('Supprimer ce billet ?')" class="text-red-600 text-sm">Supprimer</a>
+            {% endif %}
+        </div>
+    </article>
+
+    <div class="glass p-6 rounded-3xl mt-4">
+        <h2 class="font-bold text-green-900 mb-3">💬 Commentaires ({{ comments|length }})</h2>
+        <ul class="space-y-2 mb-4">
+            {% for c in comments %}
+            <li class="bg-white/40 p-3 rounded-lg text-sm">
+                <b>{{ c.author }}</b> <span class="text-xs text-gray-500">{{ c.created_at }}</span>
+                <p class="mt-1">{{ c.body }}</p>
+                {% if can_moderate %}
+                <a href="{{ url_for('social.comment_hide', comment_id=c.id) }}" class="text-xs text-gray-500 underline">Masquer</a>
+                {% endif %}
+            </li>
+            {% else %}
+            <p class="text-sm text-gray-500 italic">Aucun commentaire.</p>
+            {% endfor %}
+        </ul>
+        {% if session.get('user_id') %}
+        <form method="POST" class="flex gap-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="comment" required maxlength="500" placeholder="Commenter…" class="flex-grow p-2 rounded-xl bg-white/50 border border-white/30 text-sm">
+            <button class="px-4 py-2 rounded-xl bg-green-700 text-white font-bold text-sm">OK</button>
+        </form>
+        {% else %}
+        <p class="text-sm"><a href="{{ url_for('auth.login') }}" class="underline font-bold">Connectez-vous</a> pour commenter.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
