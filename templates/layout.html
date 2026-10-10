@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hinga - Mon Potager</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#15803d">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/icon-192.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
     <script src="{{ url_for('static', filename='vendor/tailwind.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/phosphor/regular.css') }}">
 </head>
 <body class="text-gray-900 min-h-screen flex flex-col antialiased">
@@ -61,6 +65,14 @@
     <footer class="text-center py-4 text-white/80 text-xs">
         &copy; 2025 Hinga - Jardinage Assisté
     </footer>
+
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js').catch(function() {});
+        });
+    }
+    </script>
 
 </body>
 </html>

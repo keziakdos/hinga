@@ -1,0 +1,22 @@
+/* Impression : fiches plantes et annonces (V2.6). */
+@media print {
+  nav, footer, button, form, script, .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+    font-size: 12pt;
+  }
+  .glass {
+    background: #fff !important;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  a {
+    text-decoration: none !important;
+    color: #000 !important;
+  }
+}

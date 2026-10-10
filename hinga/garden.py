@@ -87,6 +87,17 @@ def tip_details(tip_id):
     tip['thumb'] = _tip_thumb(tip['image'])
     return render_template('tip_detail.html', tip=tip)
 
+# --- PWA / HORS-LIGNE (V2.6) ---
+@bp.route('/sw.js')
+def service_worker():
+    return current_app.send_static_file('js/sw.js')
+
+
+@bp.route('/hors-ligne')
+def offline():
+    return render_template('offline.html')
+
+
 # --- ROUTES PRIVÉES (Récoltes, Stats, Ma Plante) ---
 
 @bp.route('/harvests', methods=['GET', 'POST'])
