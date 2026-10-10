@@ -1,9 +1,17 @@
 {% extends "layout.html" %}
 {% block content %}
+<script src="{{ url_for('static', filename='vendor/chart.js') }}"></script>
 <div class="max-w-6xl mx-auto space-y-6 pb-10">
-    <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-gray-800">👁️ Visites : humains, robots, intrusions</h1>
-        <a href="{{ url_for('admin.admin_dashboard') }}" class="text-gray-600 underline text-sm">← Admin</a>
+    <div class="glass p-4 rounded-2xl flex flex-wrap gap-3 justify-between items-center">
+        <h1 class="text-2xl font-bold text-green-900">📊 Statistiques d'Audience</h1>
+        <form method="GET" action="{{ url_for('admin.admin_visits') }}" class="flex gap-2 items-center text-sm">
+            <select name="periode" onchange="this.form.submit()" class="p-2 rounded-lg bg-white/50 border border-white/30 font-bold">
+                <option value="1" {% if stats and stats.periode == 1 %}selected{% endif %}>Aujourd'hui</option>
+                <option value="7" {% if not stats or stats.periode == 7 %}selected{% endif %}>7 jours</option>
+                <option value="30" {% if stats and stats.periode == 30 %}selected{% endif %}>30 jours</option>
+            </select>
+            <span class="px-3 py-2 rounded-lg bg-white/50 font-bold">📅 {{ stats.ref_day if stats else '—' }}</span>
+        </form>
     </div>
 
     {% if missing %}
@@ -11,26 +19,96 @@
         <p class="text-gray-700">Log introuvable : <b class="font-mono">{{ missing }}</b></p>
         <p class="text-sm text-gray-600 mt-2">Ajoutez <b class="font-mono">access_log /var/log/nginx/hinga.access.log;</b>
         dans le bloc <b class="font-mono">server</b> de <b class="font-mono">hinga</b> (root), puis
-        <b class="font-mono">nginx -t && systemctl reload nginx</b>. En attendant :
-        <b class="font-mono">./scripts/analyse_visites.sh /var/log/nginx/access.log 7</b> depuis le dossier de l'app.</p>
+        <b class="font-mono">nginx -t && systemctl reload nginx</b>.</p>
     </div>
     {% else %}
-    <p class="text-xs text-gray-500">Source : {{ stats.log_path }} ({{ stats.total }} dernières requêtes analysées, lecture seule)</p>
+    <p class="text-xs text-gray-500">Source : {{ stats.log_path }} ({{ stats.total }} requêtes analysées, lecture seule)</p>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold">{{ stats.total }}</span><span class="text-xs uppercase text-gray-500 font-bold">Requêtes</span></div>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold text-gray-700">{{ stats.total }}</span><span class="text-xs uppercase text-gray-500 font-bold">Requêtes totales</span></div>
         <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold text-green-700">{{ stats.humans }}</span><span class="text-xs uppercase text-gray-500 font-bold">Humains (est.)</span></div>
-        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold text-gray-600">{{ stats.bots }}</span><span class="text-xs uppercase text-gray-500 font-bold">Robots</span></div>
+        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold text-blue-700">{{ stats.unique }}</span><span class="text-xs uppercase text-gray-500 font-bold">Visiteurs uniques</span></div>
+        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold text-orange-600">{{ stats.bots }}</span><span class="text-xs uppercase text-gray-500 font-bold">Robots</span></div>
         <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold {% if stats.suspicious %}text-red-700{% else %}text-green-700{% endif %}">{{ stats.suspicious|length }}</span><span class="text-xs uppercase text-gray-500 font-bold">IP suspectes</span></div>
     </div>
 
+    <div class="grid md:grid-cols-3 gap-6">
+        <div class="glass p-6 rounded-2xl">
+            <h2 class="font-bold text-green-900 mb-3 text-center">📄 Pages vues (humains)</h2>
+            <ul class="text-sm space-y-1">
+                {% for p, n in stats.top_pages %}
+                <li class="flex justify-between gap-2"><span class="font-mono truncate">{{ p }}</span><b>{{ n }}</b></li>
+                {% else %}
+                <li class="text-gray-500 italic">Aucune page.</li>
+                {% endfor %}
+            </ul>
+            <p class="text-xs text-gray-500 mt-2">Fichiers techniques (.css, .js…) exclus.</p>
+        </div>
+
+        <div class="glass p-6 rounded-2xl">
+            <h2 class="font-bold text-green-900 mb-3 text-center">🧭 Sources de trafic</h2>
+            <ul class="text-sm space-y-1 mb-3">
+                {% for s, n in stats.sources %}
+                <li class="flex justify-between"><span>{{ s }}</span><b>{{ n }}</b></li>
+                {% else %}
+                <li class="text-gray-500 italic">Aucune donnée.</li>
+                {% endfor %}
+            </ul>
+            <div class="relative h-40"><canvas id="chartTrend"></canvas></div>
+            <p class="text-xs text-gray-500 mt-1 text-center">Tendance de la journée (humains / heure)</p>
+        </div>
+
+        <div class="glass p-6 rounded-2xl">
+            <h2 class="font-bold text-green-900 mb-3 text-center">🌐 Top adresses IP</h2>
+            <ul class="text-sm space-y-2">
+                {% for e in stats.top_ips %}
+                <li class="flex justify-between items-center gap-1">
+                    <span class="font-mono truncate">{{ '🏠' if e.local else '🌍' }} {{ e.ip }}</span>
+                    <span class="flex items-center gap-2 shrink-0"><b>{{ e.n }}{% if e.bot %} 🤖{% endif %}</b>
+                    <a href="{{ url_for('admin.admin_visits', ip=e.ip, periode=stats.periode) }}" class="text-xs text-blue-700 underline">Inspecter</a></span>
+                </li>
+                {% endfor %}
+            </ul>
+            <p class="text-xs text-gray-500 mt-2">🏠 = réseau local · 🌍 = internet (pays précis = base GeoIP, option future, pas de cloud).</p>
+        </div>
+    </div>
+
+    {% if stats.inspect %}
+    <div class="glass p-6 rounded-2xl border-t-4 border-blue-500">
+        <h2 class="font-bold text-blue-900 mb-1">🔍 Inspection : <span class="font-mono">{{ stats.inspect.ip }}</span></h2>
+        <p class="text-sm text-gray-600 mb-3">{{ stats.inspect.n }} requêtes · {{ stats.inspect.bad }} erreurs · {{ 'robot' if stats.inspect.bot else 'humain (est.)' }}</p>
+        <div class="overflow-x-auto mb-3">
+            <table class="w-full text-left text-xs font-mono">
+                <tbody class="divide-y divide-gray-400/20">
+                    {% for h in stats.inspect.hits %}
+                    <tr class="hover:bg-white/30">
+                        <td class="p-1 text-gray-500 whitespace-nowrap">{{ h.time }}</td>
+                        <td class="p-1">{{ h.method }}</td>
+                        <td class="p-1 break-all">{{ h.path }}</td>
+                        <td class="p-1">{{ h.status }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <details class="text-sm">
+            <summary class="cursor-pointer font-bold text-red-700">⛔ Bloquer cette IP (commandes root à copier)</summary>
+            <pre class="bg-gray-900 text-green-200 p-3 rounded-xl mt-2 overflow-x-auto text-xs">iptables -I INPUT -s {{ stats.inspect.ip }} -j DROP
+netfilter-persistent save   # persister (paquet iptables-persistent)
+# Alternative nginx (fichier hinga uniquement, dans server { ... }) :
+#   deny {{ stats.inspect.ip }};
+# puis : nginx -t && systemctl reload nginx</pre>
+        </details>
+    </div>
+    {% endif %}
+
     {% if stats.suspicious %}
     <div class="glass p-6 rounded-2xl border-t-4 border-red-500">
-        <h2 class="text-xl font-bold text-red-800 mb-3">🚨 Adresses suspectes (tentatives de piratage ?)</h2>
+        <h2 class="text-xl font-bold text-red-800 mb-3">🚨 Adresses suspectes</h2>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm">
                 <thead class="text-xs uppercase text-gray-500 border-b border-gray-400/30">
-                    <tr><th class="p-2">IP</th><th class="p-2 text-center">Requêtes</th><th class="p-2 text-center">Erreurs</th><th class="p-2">Robot ?</th><th class="p-2">Pourquoi suspecte</th></tr>
+                    <tr><th class="p-2">IP</th><th class="p-2 text-center">Requêtes</th><th class="p-2 text-center">Erreurs</th><th class="p-2">Pourquoi</th><th class="p-2"></th></tr>
                 </thead>
                 <tbody class="divide-y divide-gray-400/20">
                     {% for s in stats.suspicious %}
@@ -38,39 +116,34 @@
                         <td class="p-2 font-mono font-bold">{{ s.ip }}</td>
                         <td class="p-2 text-center">{{ s.n }}</td>
                         <td class="p-2 text-center">{{ s.bad }}</td>
-                        <td class="p-2">{{ 'oui' if s.bot else 'non' }}</td>
                         <td class="p-2">{{ s.reasons|join(' · ') }}</td>
+                        <td class="p-2"><a href="{{ url_for('admin.admin_visits', ip=s.ip, periode=stats.periode) }}" class="text-xs text-blue-700 underline">Inspecter</a></td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        <p class="text-xs text-gray-500 mt-3">En cas d'attaque persistante depuis une IP : bannissez-la côté frontal (demandez la procédure, ne touchez pas aux autres sites).</p>
     </div>
     {% endif %}
 
-    <div class="grid md:grid-cols-2 gap-6">
-        <div class="glass p-6 rounded-2xl">
-            <h2 class="font-bold text-green-900 mb-3 text-center">📄 Pages vues (humains)</h2>
-            <ul class="text-sm space-y-1">
-                {% for p, n in stats.top_pages %}
-                <li class="flex justify-between"><span class="font-mono truncate">{{ p }}</span><b>{{ n }}</b></li>
-                {% endfor %}
-            </ul>
+    <div class="glass p-6 rounded-2xl">
+        <h2 class="font-bold text-green-900 mb-3 text-center">📱 Appareils (humains)</h2>
+        {% set tot = stats.devices.mobile + stats.devices.desktop %}
+        {% if tot %}
+        {% set pm = (100 * stats.devices.mobile / tot)|round|int %}
+        <div class="flex h-6 rounded-full overflow-hidden bg-gray-200">
+            <div style="width: {{ pm }}%" class="bg-green-600"></div>
+            <div style="width: {{ 100 - pm }}%" class="bg-blue-400"></div>
         </div>
-        <div class="glass p-6 rounded-2xl">
-            <h2 class="font-bold text-green-900 mb-3 text-center">🌐 Top adresses IP</h2>
-            <ul class="text-sm space-y-1">
-                {% for ip, s in stats.top_ips %}
-                <li class="flex justify-between"><span class="font-mono">{{ ip }}</span><b>{{ s.n }}{% if s.bot %} 🤖{% endif %}</b></li>
-                {% endfor %}
-            </ul>
-        </div>
+        <p class="text-center text-sm mt-2">Mobile <b>{{ pm }}%</b> · Desktop <b>{{ 100 - pm }}%</b></p>
+        {% else %}
+        <p class="text-center text-gray-500 italic text-sm">Aucune donnée.</p>
+        {% endif %}
     </div>
 
     {% if stats.recent %}
     <div class="glass p-6 rounded-2xl">
-        <h2 class="font-bold text-green-900 mb-3">🔍 Sondes récentes (fichiers sensibles, injections)</h2>
+        <h2 class="font-bold text-green-900 mb-3">🔍 Sondes récentes</h2>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-xs font-mono">
                 <tbody class="divide-y divide-gray-400/20">
@@ -90,4 +163,18 @@
     {% endif %}
     {% endif %}
 </div>
+
+<script>
+    const ctxT = document.getElementById('chartTrend');
+    if (ctxT) {
+        new Chart(ctxT.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: {{ stats.trend_labels | safe if stats else '[]' }},
+                datasets: [{ data: {{ stats.trend_values | safe if stats else '[]' }}, backgroundColor: 'rgba(34, 197, 94, 0.6)' }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+    }
+</script>
 {% endblock %}

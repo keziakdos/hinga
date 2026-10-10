@@ -775,7 +775,31 @@ PROBE_RE = _re.compile(r'/\.env|wp-admin|wp-login|phpmyadmin|\.git/|\.svn|xmlrpc
 ATTACK_RE = _re.compile(r'union\s+select|sleep\s*\(|benchmark\s*\(|\.\./|%2e%2e|etc/passwd|'
                         r'<script|base64_decode|_query\[|GLOBALS\[', _re.I)
 COMBINED_RE = _re.compile(r'^(?P<ip>\S+) \S+ \S+ \[(?P<time>[^\]]+)\] "(?P<method>[A-Z]+) '
-                          r'(?P<path>\S+)[^"]*" (?P<status>\d{3}) (?P<size>\S+) "[^"]*" "(?P<ua>[^"]*)"')
+                          r'(?P<path>\S+)[^"]*" (?P<status>\d{3}) (?P<size>\S+) "(?P<ref>[^"]*)" "(?P<ua>[^"]*)"')
+RES_RE = _re.compile(r'\.(css|js|mjs|woff2?|ttf|png|jpe?g|gif|svg|ico|map)(\?|$)', _re.I)
+MOB_RE = _re.compile(r'Mobile|Android|iPhone|iPad|iPod|Phone', _re.I)
+LOCAL_RE = _re.compile(r'^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)')
+
+
+def _log_day(time_str):
+    from datetime import datetime as _dt
+    try:
+        return _dt.strptime(time_str.split()[0], '%d/%b/%Y:%H:%M:%S').date()
+    except (ValueError, IndexError):
+        return None
+
+
+def _source(ref):
+    r = (ref or '').lower()
+    if not r or r == '-':
+        return 'Direct'
+    if any(d in r for d in ['google.', 'bing.com', 'duckduckgo', 'yahoo.', 'ecosia.', 'brave.com',
+                            'qwant.', 'mojeek.', 'startpage.', 'yandex.']):
+        return 'Recherche'
+    if any(d in r for d in ['facebook.', 'instagram.', 'twitter.', 'x.com', 'linkedin.', 'tiktok.',
+                            'pinterest.', 'reddit.', 'whatsapp', 'telegram.', 'youtube.']):
+        return 'Réseaux sociaux'
+    return 'Autres sites'
 
 
 def _parse_visits(path, max_lines):
@@ -800,7 +824,8 @@ def _parse_visits(path, max_lines):
         except ValueError:
             status = 0
         entries.append(dict(ip=d['ip'], time=d['time'], method=d['method'], path=d['path'][:120],
-                            status=status, ua=ua[:120], bot=is_bot, probe=probe, attack=attack,
+                            status=status, ua=ua[:120], ref=(d.get('ref') or '')[:160],
+                            bot=is_bot, probe=probe, attack=attack,
                             bad=status in (400, 403, 404)))
     return entries
 
@@ -809,12 +834,27 @@ def _parse_visits(path, max_lines):
 @login_required
 def admin_visits():
     if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    from datetime import timedelta
     log_path = current_app.config.get('NGINX_ACCESS_LOG', '')
     entries = _parse_visits(log_path, current_app.config.get('VISIT_MAX_LINES', 5000))
     if entries is None:
         return render_template('admin/visits.html', missing=log_path, stats=None)
+    try:
+        days = int(request.args.get('periode', '7'))
+    except (TypeError, ValueError):
+        days = 7
+    if days not in (1, 7, 30):
+        days = 7
+    dated = [(e, _log_day(e['time'])) for e in entries]
+    ref_day = max((d for _, d in dated if d), default=None)
+    if ref_day:
+        entries = [e for e, d in dated if d and d >= ref_day - timedelta(days=days - 1)]
+    else:
+        ref_day = None
+    inspect_ip = request.args.get('ip', '').strip()[:45]
     humans = [e for e in entries if not e['bot']]
     bots = [e for e in entries if e['bot']]
+    unique_visitors = len({e['ip'] for e in humans})
     by_ip = {}
     for e in entries:
         s = by_ip.setdefault(e['ip'], {'n': 0, 'bad': 0, 'bot': False, 'probe': False, 'attack': False})
@@ -840,12 +880,46 @@ def admin_visits():
     pages = {}
     for e in humans:
         p = e['path'].split('?')[0]
-        if p.startswith('/'):
-            pages[p] = pages.get(p, 0) + 1
+        if p.startswith('/static/') or RES_RE.search(p):
+            continue
+        if p == '/':
+            p = '/ (Accueil)'
+        pages[p] = pages.get(p, 0) + 1
+    sources = {}
+    for e in humans:
+        s = _source(e['ref'])
+        sources[s] = sources.get(s, 0) + 1
+    mobile = sum(1 for e in humans if MOB_RE.search(e['ua']))
+    devices = dict(mobile=mobile, desktop=len(humans) - mobile)
+    trend_labels, trend_values = [], []
+    if ref_day:
+        per_hour = [0] * 24
+        for e in humans:
+            try:
+                h = int(e['time'].split(':')[1])
+                if 0 <= h <= 23:
+                    per_hour[h] += 1
+            except (ValueError, IndexError):
+                continue
+        trend_labels = [f"{h:02d}h" for h in range(24)]
+        trend_values = per_hour
+    top_ips = []
+    for ip, s in sorted(by_ip.items(), key=lambda x: -x[1]['n'])[:15]:
+        top_ips.append(dict(ip=ip, n=s['n'], bot=s['bot'],
+                            local=bool(LOCAL_RE.match(ip))))
+    inspect = None
+    if inspect_ip:
+        hits = [e for e in entries if e['ip'] == inspect_ip][-30:][::-1]
+        s = by_ip.get(inspect_ip, {'n': 0, 'bad': 0, 'bot': False})
+        inspect = dict(ip=inspect_ip, n=s['n'], bad=s['bad'], bot=s['bot'], hits=hits)
+    import json as _json
     stats = dict(total=len(entries), humans=len(humans), bots=len(bots),
-                 ips=len(by_ip), suspicious=suspicious[:50],
+                 unique=unique_visitors, ips=len(by_ip), suspicious=suspicious[:50],
                  top_pages=sorted(pages.items(), key=lambda x: -x[1])[:15],
-                 top_ips=sorted(by_ip.items(), key=lambda x: -x[1]['n'])[:15],
+                 sources=sorted(sources.items(), key=lambda x: -x[1]),
+                 devices=devices, top_ips=top_ips, inspect=inspect,
                  recent=[e for e in entries if e['probe'] or e['attack']][-30:][::-1],
-                 log_path=log_path)
+                 log_path=log_path, periode=days,
+                 ref_day=ref_day.strftime('%d/%m/%Y') if ref_day else '—',
+                 trend_labels=_json.dumps(trend_labels), trend_values=_json.dumps(trend_values))
     return render_template('admin/visits.html', missing=None, stats=stats)
