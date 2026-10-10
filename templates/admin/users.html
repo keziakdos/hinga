@@ -18,11 +18,11 @@
                     </span>
                 </div>
                 <div class="flex gap-3 items-center">
-                    <a href="{{ url_for('admin_edit_user', user_id=u.id) }}" class="text-blue-600 hover:text-blue-800" title="Modifier">
+                    <a href="{{ url_for('admin.admin_edit_user', user_id=u.id) }}" class="text-blue-600 hover:text-blue-800" title="Modifier">
                         <i class="ph ph-pencil"></i>
                     </a>
                     {% if u.id != session['user_id'] %}
-                    <a href="{{ url_for('admin_delete_user', user_id=u.id) }}" class="text-red-600 hover:text-red-800" onclick="return confirm('Sûr ?')">
+                    <a href="{{ url_for('admin.admin_delete_user', user_id=u.id) }}" class="text-red-600 hover:text-red-800" onclick="return confirm('Sûr ?')">
                         <i class="ph ph-trash"></i>
                     </a>
                     {% endif %}

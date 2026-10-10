@@ -11,7 +11,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for tip in tips %}
        
-	<a href="{{ url_for('tip_details', tip_id=tip.id) }}" class="glass rounded-2xl overflow-hidden hover:scale-[1.02] transition duration-300 flex flex-col h-full cursor-pointer block">
+	<a href="{{ url_for('garden.tip_details', tip_id=tip.id) }}" class="glass rounded-2xl overflow-hidden hover:scale-[1.02] transition duration-300 flex flex-col h-full cursor-pointer block">
 
 
             

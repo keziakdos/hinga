@@ -3,10 +3,10 @@
 <div class="max-w-4xl mx-auto pb-20">
 
     <div class="flex justify-between items-center mb-6">
-        <a href="{{ url_for('maplante') }}" class="flex items-center gap-2 text-gray-600 hover:text-green-800 transition">
+        <a href="{{ url_for('garden.maplante') }}" class="flex items-center gap-2 text-gray-600 hover:text-green-800 transition">
             <i class="ph ph-arrow-left"></i> Retour à la liste
         </a>
-        <a href="{{ url_for('monitor_delete', id=entry_id) }}" onclick="return confirm('Supprimer ?')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded-lg transition font-bold text-sm flex items-center gap-1">
+        <a href="{{ url_for('garden.monitor_delete', id=entry_id) }}" onclick="return confirm('Supprimer ?')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded-lg transition font-bold text-sm flex items-center gap-1">
             <i class="ph ph-trash"></i> Supprimer ce rapport
         </a>
     </div>

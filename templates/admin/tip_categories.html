@@ -3,7 +3,7 @@
 <div class="max-w-3xl mx-auto">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800">Catégories de conseils</h1>
-        <a href="{{ url_for('admin_tips') }}" class="text-gray-600 underline text-sm">← Retour aux conseils</a>
+        <a href="{{ url_for('admin.admin_tips') }}" class="text-gray-600 underline text-sm">← Retour aux conseils</a>
     </div>
 
     <div class="grid md:grid-cols-2 gap-8">
@@ -12,10 +12,10 @@
             <ul class="space-y-2">
                 {% for c in categories %}
                 <li class="bg-white/40 p-3 rounded-lg">
-                    <form method="POST" action="{{ url_for('admin_edit_tip_category', cat_id=c.id) }}" class="flex gap-2 items-center">
+                    <form method="POST" action="{{ url_for('admin.admin_edit_tip_category', cat_id=c.id) }}" class="flex gap-2 items-center">
                         <input type="text" name="name" value="{{ c.name }}" required class="flex-grow p-2 rounded bg-white/50 border border-white/30">
                         <button type="submit" class="text-blue-600 px-2" title="Renommer"><i class="ph ph-check"></i></button>
-                        <a href="{{ url_for('admin_delete_tip_category', cat_id=c.id) }}" class="text-red-600 px-2" onclick="return confirm('Supprimer cette catégorie ? Les conseils seront conservés.')" title="Supprimer"><i class="ph ph-trash"></i></a>
+                        <a href="{{ url_for('admin.admin_delete_tip_category', cat_id=c.id) }}" class="text-red-600 px-2" onclick="return confirm('Supprimer cette catégorie ? Les conseils seront conservés.')" title="Supprimer"><i class="ph ph-trash"></i></a>
                     </form>
                 </li>
                 {% else %}

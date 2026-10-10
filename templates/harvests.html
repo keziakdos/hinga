@@ -9,7 +9,7 @@
                 <i class="ph ph-plus-circle"></i> Nouvelle Récolte
             </h2>
             
-            <form method="POST" action="{{ url_for('harvests') }}" class="space-y-4">
+            <form method="POST" action="{{ url_for('garden.harvests') }}" class="space-y-4">
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-1">Quelle plante ?</label>
                     <select name="plant_id" required class="w-full p-2 rounded-lg bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-green-400">

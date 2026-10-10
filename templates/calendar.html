@@ -20,7 +20,7 @@
                     {% for m in months %}
                         {% set month_num = loop.index %}
                         <th class="p-3 text-sm uppercase">
-                            <a href="{{ url_for('calendar', mois=month_num) }}" title="Voir les semis et récoltes de {{ MOIS_FR[month_num - 1] }}"
+                            <a href="{{ url_for('garden.calendar', mois=month_num) }}" title="Voir les semis et récoltes de {{ MOIS_FR[month_num - 1] }}"
                                class="inline-block px-2 py-1 rounded-lg hover:bg-green-600 hover:text-white transition {% if selected_month == month_num %}bg-green-700 text-white font-bold shadow{% endif %}">{{ m }}</a>
                         </th>
                     {% endfor %}
@@ -31,7 +31,7 @@
                 <tr class="hover:bg-white/20 transition border-b border-gray-200/20">
                     
 		    <td class="p-3 sticky left-0 bg-white/30 backdrop-blur-md font-bold text-gray-800 z-10 whitespace-nowrap group">
-    			<a href="{{ url_for('plant_details', plant_id=p.id) }}" class="group-hover:text-green-700 transition flex flex-col">
+    			<a href="{{ url_for('garden.plant_details', plant_id=p.id) }}" class="group-hover:text-green-700 transition flex flex-col">
         			{{ p.name }} 
         			<span class="text-xs font-normal text-gray-600 group-hover:text-green-600">{{ p.type }}</span>
     			</a>
@@ -62,7 +62,7 @@
     <div id="detail-mois" class="glass p-6 rounded-2xl mt-6">
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-2xl font-bold text-green-900">🗓️ {{ MOIS_FR[selected_month - 1] }}</h2>
-            <a href="{{ url_for('calendar') }}" class="text-sm text-gray-600 underline">Effacer la sélection</a>
+            <a href="{{ url_for('garden.calendar') }}" class="text-sm text-gray-600 underline">Effacer la sélection</a>
         </div>
         <div class="grid md:grid-cols-2 gap-6">
             <div class="bg-green-100/40 p-4 rounded-xl border border-green-200/50">
@@ -70,7 +70,7 @@
                 {% if a_semis %}
                 <ul class="space-y-2">
                     {% for p in a_semis %}
-                    <li><a href="{{ url_for('plant_details', plant_id=p.id) }}" class="font-bold text-green-800 hover:underline">{{ p.name }}</a>
+                    <li><a href="{{ url_for('garden.plant_details', plant_id=p.id) }}" class="font-bold text-green-800 hover:underline">{{ p.name }}</a>
                         <span class="text-xs text-gray-600"> — {{ p.type }} · Semis : {{ periode_label(p.sow_start, p.sow_end) }}</span></li>
                     {% endfor %}
                 </ul>
@@ -83,7 +83,7 @@
                 {% if a_recolter %}
                 <ul class="space-y-2">
                     {% for p in a_recolter %}
-                    <li><a href="{{ url_for('plant_details', plant_id=p.id) }}" class="font-bold text-orange-800 hover:underline">{{ p.name }}</a>
+                    <li><a href="{{ url_for('garden.plant_details', plant_id=p.id) }}" class="font-bold text-orange-800 hover:underline">{{ p.name }}</a>
                         <span class="text-xs text-gray-600"> — {{ p.type }} · Récolte : {{ periode_label(p.harvest_start, p.harvest_end) }}</span></li>
                     {% endfor %}
                 </ul>
