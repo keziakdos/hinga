@@ -13,6 +13,8 @@ Ne supprime rien. Ajoute uniquement :
 - tip_categories(id, name UNIQUE) + tips.category_id (+ 4 catégories de base)
 - V2.2 annonces : listing_categories(id, uuid, name, parent_id, position, active,
   created_at) + jeu de départ ; listings + listing_photos ; reports
+- V2.3 social : users.avatar, users.jardin ; conversations, messages,
+  notifications
 Sauvegarde auto dans backup/ avant toute écriture.
 """
 import argparse
@@ -157,6 +159,41 @@ def migrate(db_path: str) -> None:
                 target_id INTEGER NOT NULL, reason TEXT NOT NULL,
                 details TEXT DEFAULT '', status TEXT DEFAULT 'open',
                 created_at TEXT
+            )"""
+        )
+
+        # --- V2.3 : profils + messagerie + notifications ---
+        ucols = columns(conn, "users")
+        for coldef in [
+            ("avatar", "TEXT DEFAULT ''"),
+            ("jardin", "TEXT DEFAULT ''"),
+        ]:
+            name, typedef = coldef
+            if name not in ucols:
+                conn.execute(f"ALTER TABLE users ADD COLUMN {name} {typedef}")
+                print(f"+ users.{name}")
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS conversations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                uuid TEXT DEFAULT '', listing_id INTEGER,
+                user_a INTEGER NOT NULL, user_b INTEGER NOT NULL,
+                created_at TEXT, updated_at TEXT
+            )"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+                author_id INTEGER NOT NULL, body TEXT NOT NULL,
+                created_at TEXT, read_at TEXT DEFAULT ''
+            )"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL, kind TEXT DEFAULT '',
+                title TEXT NOT NULL, link TEXT DEFAULT '',
+                read_at TEXT DEFAULT '', created_at TEXT
             )"""
         )
 

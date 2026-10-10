@@ -11,7 +11,7 @@ from hinga.db import get_db
 from hinga.helpers import MOIS_FR, PLANT_TYPES, unique_filename
 from hinga.services.images import is_managed_image, save_tip_image, thumb_name  # noqa: F401
 from hinga.utils import _delete_managed_image, _tip_thumb, allowed_file, audit  # noqa: F401
-from hinga.utils import valid_email, valid_password, valid_username
+from hinga.utils import notify, valid_email, valid_password, valid_username
 
 bp = Blueprint('admin', __name__)
 
@@ -113,6 +113,7 @@ def admin_user_status(user_id):
         db.execute("UPDATE users SET status='approved', is_active=1, motif='' WHERE id=?", (user_id,))
         db.commit()
         audit('user_approve', 'user', user_id, f"approbation de {name}")
+        notify(user_id, 'compte', 'Bienvenue sur Hinga ! Votre compte est approuvé.', '/echanges')
         flash(f'{name} approuvé, bienvenue !')
     elif do == 'refuse':
         db.execute("UPDATE users SET status='refused', motif=? WHERE id=?", (motif, user_id))

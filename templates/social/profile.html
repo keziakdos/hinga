@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto pb-10">
+    <div class="glass p-8 rounded-3xl">
+        <div class="flex flex-col md:flex-row gap-6 items-center">
+            {% if avatar %}
+            <img src="{{ url_for('static', filename='img/' + avatar) }}" alt="{{ user.username }}" class="w-28 h-28 object-cover rounded-full shadow" onerror="this.style.display='none'">
+            {% else %}
+            <span class="w-28 h-28 flex items-center justify-center bg-green-100/60 rounded-full text-5xl">🌻</span>
+            {% endif %}
+            <div class="flex-grow text-center md:text-left">
+                <h1 class="text-3xl font-bold text-green-900">{{ user.username }}</h1>
+                <p class="text-gray-600 text-sm">{{ user.first_name }} {{ user.last_name }}{% if user.zone %} · {{ user.zone }}{% endif %}</p>
+                <p class="text-xs text-gray-500 mt-1">Membre depuis {{ user.created_at or '—' }} · {{ active }} annonce(s) · {{ done }} échange(s) terminé(s)</p>
+                <div class="flex flex-wrap gap-2 justify-center md:justify-start mt-3">
+                    {% if session.get('user_id') == user.id %}
+                    <a href="{{ url_for('social.my_profile') }}" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-sm">Modifier mon profil</a>
+                    {% elif session.get('user_id') %}
+                    <a href="{{ url_for('social.new_conversation', vers=user.username) }}" class="px-4 py-2 rounded-xl bg-green-700 text-white font-bold text-sm">Écrire un message</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% if user.presentation %}
+        <p class="mt-6 text-gray-800 leading-relaxed">{{ user.presentation }}</p>
+        {% endif %}
+        <div class="grid md:grid-cols-3 gap-4 mt-6 text-sm">
+            <div class="bg-white/40 p-3 rounded-xl"><span class="block font-bold text-gray-700">🌿 Mon jardin</span>{{ user.jardin or '—' }}</div>
+            <div class="bg-white/40 p-3 rounded-xl"><span class="block font-bold text-gray-700">🔍 Je cherche</span>{{ user.cherche or '—' }}</div>
+            <div class="bg-white/40 p-3 rounded-xl"><span class="block font-bold text-gray-700">🎁 Je peux offrir</span>{{ user.offre or '—' }}</div>
+        </div>
+        {% if annonces %}
+        <h2 class="text-xl font-bold text-green-900 mt-8 mb-3">Annonces de {{ user.username }}</h2>
+        <ul class="space-y-2">
+            {% for a in annonces %}
+            <li><a href="{{ url_for('exchange.exchange_detail', listing_id=a.id) }}" class="font-bold text-green-800 hover:underline">{{ a.title }}</a>
+                <span class="text-xs text-gray-600"> — {{ a.kind }} · {{ a.status }}</span></li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

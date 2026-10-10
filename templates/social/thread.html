@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto pb-10">
+    <a href="{{ url_for('social.inbox') }}" class="inline-flex items-center gap-2 text-white bg-black/20 hover:bg-black/40 px-4 py-2 rounded-lg mb-4 transition text-sm"><i class="ph ph-arrow-left"></i> Messages</a>
+    <div class="glass p-6 rounded-3xl">
+        <h1 class="text-xl font-bold text-green-900 mb-1">Avec {{ other }}</h1>
+        {% if listing %}
+        <p class="text-sm text-gray-600 mb-4">Annonce : <a href="{{ url_for('exchange.exchange_detail', listing_id=listing.id) }}" class="underline font-bold">{{ listing.title }}</a></p>
+        {% endif %}
+        <div class="space-y-3 max-h-[50vh] overflow-y-auto mb-4">
+            {% for m in messages %}
+            <div class="flex {% if m.author == other %}justify-start{% else %}justify-end{% endif %}">
+                <div class="max-w-[80%] p-3 rounded-2xl text-sm {% if m.author == other %}bg-white/60{% else %}bg-green-700 text-white{% endif %}">
+                    <p class="whitespace-pre-line">{{ m.body }}</p>
+                    <span class="block text-xs opacity-60 mt-1">{{ m.created_at }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <form method="POST" class="flex gap-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="message" required maxlength="2000" placeholder="Écrire…" class="flex-grow p-2 rounded-xl bg-white/50 border border-white/30">
+            <button class="px-5 py-2 rounded-xl bg-green-700 text-white font-bold">➤</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

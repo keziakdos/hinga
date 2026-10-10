@@ -22,6 +22,9 @@ une V2 communautaire (partage/échange/don) — voir `docs/V2-proposition.md`.
   rôles membre/modérateur/admin, suspension, journal d'audit).
 - **Comptes (V2.1)** : inscription publique (pseudo, email, zone sans adresse exacte,
   charte acceptée) → validation admin ; compte en attente limité au message d'attente.
+- **Échanges (V2.2)** : annonces don/échange/recherche + photos, recherche et filtres,
+  catégories gérables, signalements.
+- **Social (V2.3)** : profils publics, messagerie privée anti-spam, notifications internes.
 
 ## 2. Installation en local (essai)
 

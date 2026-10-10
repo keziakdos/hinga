@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-xl mx-auto pb-10">
+    <div class="glass p-8 rounded-3xl">
+        <h1 class="text-2xl font-bold text-green-900 mb-6">Mon profil public</h1>
+        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Photo (avatar)</label>
+                {% if user.avatar %}
+                <div class="mt-2"><img src="{{ url_for('static', filename='img/' + user.avatar) }}" class="w-20 h-20 object-cover rounded-full" onerror="this.style.display='none'"></div>
+                {% endif %}
+                <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp,image/gif" class="w-full p-2 mt-2 bg-white/50 rounded">
+            </div>
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Zone (ville/région)</label>
+                <input type="text" name="zone" value="{{ user.zone or '' }}" class="w-full p-2 rounded bg-white/50 border border-white/30">
+            </div>
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Présentation</label>
+                <textarea name="presentation" rows="3" class="w-full p-2 rounded bg-white/50 border border-white/30">{{ user.presentation or '' }}</textarea>
+            </div>
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Mon jardin</label>
+                <textarea name="jardin" rows="2" class="w-full p-2 rounded bg-white/50 border border-white/30">{{ user.jardin or '' }}</textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="font-bold text-gray-700 text-sm">Je cherche</label>
+                    <input type="text" name="cherche" value="{{ user.cherche or '' }}" class="w-full p-2 rounded bg-white/50 border border-white/30">
+                </div>
+                <div>
+                    <label class="font-bold text-gray-700 text-sm">Je peux offrir</label>
+                    <input type="text" name="offre" value="{{ user.offre or '' }}" class="w-full p-2 rounded bg-white/50 border border-white/30">
+                </div>
+            </div>
+            <button class="w-full bg-green-700 text-white py-3 rounded-xl font-bold">Enregistrer</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

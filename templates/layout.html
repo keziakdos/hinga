@@ -26,6 +26,7 @@
 
             {% if session.get('user_id') %}
                 <li><a href="{{ url_for('garden.harvests') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-basket"></i> <span class="hidden md:inline">Récoltes</span></a></li>
+                <li><a href="{{ url_for('social.inbox') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-chat-circle-text"></i> <span class="hidden md:inline">Messages{% if unread_msg %} ({{ unread_msg }}){% endif %}</span>{% if unread_msg %}<span class="md:hidden bg-green-600 text-white text-xs px-1.5 rounded-full font-bold">{{ unread_msg }}</span>{% endif %}</a></li>
                 <li><a href="{{ url_for('garden.stats') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-chart-bar"></i> <span class="hidden md:inline">Stats</span></a></li>
                 <li><a href="{{ url_for('garden.maplante') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1 text-purple-800"><i class="ph ph-camera"></i> <span class="hidden md:inline">Ma Plante</span></a></li>
 

@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto pb-10">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">🔔 Notifications</h1>
+        <form method="POST" action="{{ url_for('social.notifications_read') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="text-sm text-gray-600 underline">Tout marquer comme lu</button>
+        </form>
+    </div>
+    {% if notes %}
+    <ul class="space-y-2">
+        {% for n in notes %}
+        <li class="glass p-4 rounded-2xl {% if not n.read_at %}border-l-4 border-green-600{% endif %}">
+            {% if n.link %}<a href="{{ n.link }}" class="font-bold text-green-800 hover:underline">{{ n.title }}</a>
+            {% else %}<span class="font-bold">{{ n.title }}</span>{% endif %}
+            <span class="block text-xs text-gray-500">{{ n.created_at }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-center text-gray-500 italic glass p-8 rounded-2xl">Aucune notification.</p>
+    {% endif %}
+</div>
+{% endblock %}
