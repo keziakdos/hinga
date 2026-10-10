@@ -4,7 +4,7 @@
 <script src="{{ url_for('static', filename='vendor/chart.js') }}"></script>
 
 <div class="max-w-5xl mx-auto space-y-6 pb-10">
-    <a href="{{ url_for('stats') }}" class="inline-flex items-center gap-2 text-white bg-black/20 hover:bg-black/40 px-4 py-2 rounded-lg transition">
+    <a href="{{ url_for('garden.stats') }}" class="inline-flex items-center gap-2 text-white bg-black/20 hover:bg-black/40 px-4 py-2 rounded-lg transition">
         <i class="ph ph-arrow-left"></i> Retour aux stats
     </a>
 
@@ -17,7 +17,7 @@
         <div class="flex-grow text-center md:text-left">
             <h1 class="text-3xl font-bold text-green-900">{{ plant.name }}</h1>
             <p class="text-gray-600 text-sm">Semis : {{ periode_label(plant.sow_start, plant.sow_end) }} · Récolte : {{ periode_label(plant.harvest_start, plant.harvest_end) }}</p>
-            <a href="{{ url_for('plant_details', plant_id=plant.id) }}" class="text-green-700 font-bold text-sm underline">Voir la fiche plante</a>
+            <a href="{{ url_for('garden.plant_details', plant_id=plant.id) }}" class="text-green-700 font-bold text-sm underline">Voir la fiche plante</a>
         </div>
         <div class="flex gap-3 text-center">
             <div class="bg-white/50 px-4 py-2 rounded-xl"><span class="block text-2xl font-bold">{{ count }}</span><span class="text-xs uppercase text-gray-500 font-bold">Ajouts</span></div>

@@ -46,13 +46,13 @@
                 </div>
                 <h2 class="text-2xl font-extrabold text-green-900 mb-2">{{ result.name }}</h2>
                 
-                <form action="{{ url_for('monitor_save') }}" method="POST">
+                <form action="{{ url_for('garden.monitor_save') }}" method="POST">
                     <textarea name="full_data" class="hidden">{{ result | tojson }}</textarea>
                     <button type="submit" class="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 transition hover:scale-105">
                         <i class="ph ph-floppy-disk"></i> Sauvegarder ce rapport
                     </button>
                 </form>
-                <a href="{{ url_for('maplante') }}" class="block text-center mt-3 text-gray-500 text-sm hover:underline">Nouvelle analyse</a>
+                <a href="{{ url_for('garden.maplante') }}" class="block text-center mt-3 text-gray-500 text-sm hover:underline">Nouvelle analyse</a>
             </div>
 
             <div class="space-y-4">
@@ -114,7 +114,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {% for m in monitored %}
                 <div class="glass p-0 rounded-2xl overflow-hidden hover:shadow-xl transition flex flex-col group relative">
-                    <a href="{{ url_for('monitor_view', id=m.id) }}" class="block">
+                    <a href="{{ url_for('garden.monitor_view', id=m.id) }}" class="block">
                         <div class="h-40 overflow-hidden relative">
                             <img src="{{ url_for('static', filename='img/' + m.image_path) }}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
                             <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition"></div>
@@ -125,7 +125,7 @@
                             <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ m.diagnosis_summary }}</p>
                         </div>
                     </a>
-                    <a href="{{ url_for('monitor_delete', id=m.id) }}" 
+                    <a href="{{ url_for('garden.monitor_delete', id=m.id) }}" 
                        onclick="return confirm('Supprimer définitivement ce rapport ?')"
                        class="absolute top-2 right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition z-10" title="Supprimer">
                         <i class="ph ph-trash"></i>

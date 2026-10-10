@@ -3,7 +3,7 @@
 <div class="max-w-5xl mx-auto">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold text-gray-800">Gestion des Conseils</h1>
-        <a href="{{ url_for('admin_tip_categories') }}" class="bg-yellow-600/10 text-yellow-800 border border-yellow-300 px-4 py-2 rounded-lg font-bold hover:bg-yellow-600/20 flex items-center gap-2 text-sm">
+        <a href="{{ url_for('admin.admin_tip_categories') }}" class="bg-yellow-600/10 text-yellow-800 border border-yellow-300 px-4 py-2 rounded-lg font-bold hover:bg-yellow-600/20 flex items-center gap-2 text-sm">
             <i class="ph ph-tag"></i> Gérer les catégories
         </a>
     </div>
@@ -23,8 +23,8 @@
                         <span class="text-xs text-gray-600 block">{{ t.content[:60] }}...</span>
                     </div>
                     <div class="flex gap-3 items-center shrink-0">
-                        <a href="{{ url_for('admin_edit_tip', tip_id=t.id) }}" class="text-blue-600" title="Modifier"><i class="ph ph-pencil"></i></a>
-                        <a href="{{ url_for('admin_delete_tip', tip_id=t.id) }}" class="text-red-600" onclick="return confirm('Supprimer ?')" title="Supprimer"><i class="ph ph-trash"></i></a>
+                        <a href="{{ url_for('admin.admin_edit_tip', tip_id=t.id) }}" class="text-blue-600" title="Modifier"><i class="ph ph-pencil"></i></a>
+                        <a href="{{ url_for('admin.admin_delete_tip', tip_id=t.id) }}" class="text-red-600" onclick="return confirm('Supprimer ?')" title="Supprimer"><i class="ph ph-trash"></i></a>
                     </div>
                 </li>
                 {% else %}

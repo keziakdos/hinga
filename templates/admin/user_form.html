@@ -4,7 +4,7 @@
     <div class="glass p-8 rounded-3xl">
         <div class="flex justify-between items-center mb-8">
             <h1 class="text-2xl font-bold text-green-900">Modifier : {{ user.username }}</h1>
-            <a href="{{ url_for('admin_users') }}" class="text-gray-600 underline text-sm">Annuler</a>
+            <a href="{{ url_for('admin.admin_users') }}" class="text-gray-600 underline text-sm">Annuler</a>
         </div>
 
         <form method="POST" class="space-y-4">

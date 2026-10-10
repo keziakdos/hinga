@@ -7,8 +7,8 @@
         <h1 class="text-4xl font-bold text-green-900 mb-2">🌱 Hinga</h1>
         <p class="text-gray-700 text-lg">Votre potager assisté : que semer, que récolter, et quand.</p>
         <div class="flex flex-wrap gap-3 justify-center mt-4">
-            <a href="{{ url_for('calendar') }}" class="px-5 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-white font-bold transition flex items-center gap-2"><i class="ph ph-calendar"></i> Calendrier</a>
-            <a href="{{ url_for('tips') }}" class="px-5 py-2 rounded-xl bg-white/50 hover:bg-white/80 text-green-800 font-bold transition flex items-center gap-2"><i class="ph ph-lightbulb"></i> Conseils</a>
+            <a href="{{ url_for('garden.calendar') }}" class="px-5 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-white font-bold transition flex items-center gap-2"><i class="ph ph-calendar"></i> Calendrier</a>
+            <a href="{{ url_for('garden.tips') }}" class="px-5 py-2 rounded-xl bg-white/50 hover:bg-white/80 text-green-800 font-bold transition flex items-center gap-2"><i class="ph ph-lightbulb"></i> Conseils</a>
         </div>
     </div>
 
@@ -20,7 +20,7 @@
                 {% if semer_mtn %}
                 <ul class="space-y-2">
                     {% for p in semer_mtn %}
-                    <li><a href="{{ url_for('plant_details', plant_id=p.id) }}" class="font-bold text-green-800 hover:underline">{{ p.name }}</a>
+                    <li><a href="{{ url_for('garden.plant_details', plant_id=p.id) }}" class="font-bold text-green-800 hover:underline">{{ p.name }}</a>
                         <span class="text-xs text-gray-600"> — {{ periode_label(p.sow_start, p.sow_end) }}</span></li>
                     {% endfor %}
                 </ul>
@@ -33,7 +33,7 @@
                 {% if recolter_mtn %}
                 <ul class="space-y-2">
                     {% for p in recolter_mtn %}
-                    <li><a href="{{ url_for('plant_details', plant_id=p.id) }}" class="font-bold text-orange-800 hover:underline">{{ p.name }}</a>
+                    <li><a href="{{ url_for('garden.plant_details', plant_id=p.id) }}" class="font-bold text-orange-800 hover:underline">{{ p.name }}</a>
                         <span class="text-xs text-gray-600"> — {{ periode_label(p.harvest_start, p.harvest_end) }}</span></li>
                     {% endfor %}
                 </ul>
@@ -52,7 +52,7 @@
                 {% if semer_bientot %}
                 <ul class="space-y-2">
                     {% for p in semer_bientot %}
-                    <li><a href="{{ url_for('plant_details', plant_id=p.id) }}" class="font-bold text-green-800 hover:underline">{{ p.name }}</a></li>
+                    <li><a href="{{ url_for('garden.plant_details', plant_id=p.id) }}" class="font-bold text-green-800 hover:underline">{{ p.name }}</a></li>
                     {% endfor %}
                 </ul>
                 {% else %}
@@ -64,7 +64,7 @@
                 {% if recolter_bientot %}
                 <ul class="space-y-2">
                     {% for p in recolter_bientot %}
-                    <li><a href="{{ url_for('plant_details', plant_id=p.id) }}" class="font-bold text-orange-800 hover:underline">{{ p.name }}</a></li>
+                    <li><a href="{{ url_for('garden.plant_details', plant_id=p.id) }}" class="font-bold text-orange-800 hover:underline">{{ p.name }}</a></li>
                     {% endfor %}
                 </ul>
                 {% else %}
@@ -78,7 +78,7 @@
         <h2 class="text-2xl font-bold text-green-900 mb-4 bg-white/30 p-3 rounded-xl backdrop-blur-md inline-block">🌿 Nos plantes ({{ plants|length }})</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {% for p in plants %}
-            <a href="{{ url_for('plant_details', plant_id=p.id) }}" class="glass rounded-2xl overflow-hidden hover:scale-[1.02] transition duration-300 flex flex-col h-full cursor-pointer">
+            <a href="{{ url_for('garden.plant_details', plant_id=p.id) }}" class="glass rounded-2xl overflow-hidden hover:scale-[1.02] transition duration-300 flex flex-col h-full cursor-pointer">
                 <div class="h-40 overflow-hidden bg-gray-200 relative">
                     {% if p.image and p.image != 'default.jpg' %}
                     <img src="{{ url_for('static', filename='img/' + p.image) }}" alt="{{ p.name }}" class="w-full h-full object-cover" onerror="this.style.display='none'">

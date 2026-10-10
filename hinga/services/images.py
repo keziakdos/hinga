@@ -11,7 +11,7 @@ import os
 from PIL import Image, ImageOps
 from werkzeug.utils import secure_filename
 
-from helpers import unique_filename
+from hinga.helpers import unique_filename
 
 PAGE_MAX_SIZE = (1200, 1200)
 THUMB_MAX_SIZE = (400, 400)

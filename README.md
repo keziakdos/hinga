@@ -118,14 +118,22 @@ Lecture seule, sans dépendance. Un tableau de bord temps réel est prévu en V2
 ## 9. Structure
 
 ```
-app.py                 # routes Flask (+ admin)
-helpers.py             # mois FR, périodes à cheval, noms uniques
-services/images.py     # upload conseils (validation + resize)
-services/plant_analysis.py  # IA interchangeable (gemini/openai/inactif)
+app.py                 # point d'entrée (gunicorn app:app)
+hinga/                 # paquet applicatif (blueprints)
+  __init__.py          # config, sessions, erreurs
+  auth.py              # connexion / déconnexion
+  garden.py            # accueil, calendrier, récoltes, stats, Ma Plante
+  admin.py             # plantes, conseils, utilisateurs
+  db.py                # SQLite + init/seed
+  helpers.py           # mois FR, périodes à cheval, noms uniques
+  utils.py             # uploads, miniatures
+  services/images.py   # upload conseils (validation + resize)
+  services/plant_analysis.py  # IA interchangeable (gemini/openai/inactif)
 migrate.py             # migrations rétrocompatibles + backup auto
 scripts/backup_hinga.sh / analyse_visites.sh
-templates/ (+ admin/)  # Tailwind, style glass existant
+templates/ (+ admin/)  # Tailwind local, style glass existant
 docs/V2-proposition.md # espace échange/don de la V2
+docs/V2-architecture.md# audit + plan V2
 ```
 
 Licence : MIT (voir `LICENSE`). V2 : `docs/V2-proposition.md`.

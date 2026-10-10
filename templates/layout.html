@@ -19,23 +19,23 @@
         
         <ul class="flex gap-2 text-sm md:text-base font-medium overflow-x-auto items-center">
             
-            <li><a href="{{ url_for('index') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-house"></i> <span class="hidden md:inline">Accueil</span></a></li>
-            <li><a href="{{ url_for('calendar') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-calendar"></i> <span class="hidden md:inline">Calendrier</span></a></li>
-            <li><a href="{{ url_for('tips') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-lightbulb"></i> <span class="hidden md:inline">Conseils</span></a></li>
+            <li><a href="{{ url_for('garden.index') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-house"></i> <span class="hidden md:inline">Accueil</span></a></li>
+            <li><a href="{{ url_for('garden.calendar') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-calendar"></i> <span class="hidden md:inline">Calendrier</span></a></li>
+            <li><a href="{{ url_for('garden.tips') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-lightbulb"></i> <span class="hidden md:inline">Conseils</span></a></li>
 
             {% if session.get('user_id') %}
-                <li><a href="{{ url_for('harvests') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-basket"></i> <span class="hidden md:inline">Récoltes</span></a></li>
-                <li><a href="{{ url_for('stats') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-chart-bar"></i> <span class="hidden md:inline">Stats</span></a></li>
-                <li><a href="{{ url_for('maplante') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1 text-purple-800"><i class="ph ph-camera"></i> <span class="hidden md:inline">Ma Plante</span></a></li>
+                <li><a href="{{ url_for('garden.harvests') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-basket"></i> <span class="hidden md:inline">Récoltes</span></a></li>
+                <li><a href="{{ url_for('garden.stats') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1"><i class="ph ph-chart-bar"></i> <span class="hidden md:inline">Stats</span></a></li>
+                <li><a href="{{ url_for('garden.maplante') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1 text-purple-800"><i class="ph ph-camera"></i> <span class="hidden md:inline">Ma Plante</span></a></li>
 
                 {% if session.get('role') == 'admin' %}
-                    <li><a href="{{ url_for('admin_dashboard') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1 text-red-800" title="Administration"><i class="ph ph-wrench"></i></a></li>
+                    <li><a href="{{ url_for('admin.admin_dashboard') }}" class="px-3 py-2 rounded-lg hover:bg-white/40 transition flex items-center gap-1 text-red-800" title="Administration"><i class="ph ph-wrench"></i></a></li>
                 {% endif %}
 
-                <li><a href="{{ url_for('logout') }}" class="px-3 py-2 rounded-lg hover:bg-red-100 text-red-600 transition flex items-center gap-1" title="Se déconnecter"><i class="ph ph-sign-out"></i></a></li>
+                <li><a href="{{ url_for('auth.logout') }}" class="px-3 py-2 rounded-lg hover:bg-red-100 text-red-600 transition flex items-center gap-1" title="Se déconnecter"><i class="ph ph-sign-out"></i></a></li>
             
             {% else %}
-                <li><a href="{{ url_for('login') }}" class="px-3 py-2 rounded-lg bg-white/50 hover:bg-white/80 transition flex items-center gap-1 text-green-800 font-bold ml-2"><i class="ph ph-sign-in"></i> Connexion</a></li>
+                <li><a href="{{ url_for('auth.login') }}" class="px-3 py-2 rounded-lg bg-white/50 hover:bg-white/80 transition flex items-center gap-1 text-green-800 font-bold ml-2"><i class="ph ph-sign-in"></i> Connexion</a></li>
             {% endif %}
             
         </ul>
