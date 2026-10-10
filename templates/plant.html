@@ -13,6 +13,9 @@
     <a href="{{ url_for('garden.calendar') }}" class="inline-flex items-center gap-2 text-white bg-black/20 hover:bg-black/40 px-4 py-2 rounded-lg mb-6 transition backdrop-blur-md font-semibold">
         <i class="ph ph-arrow-left"></i> Retour au calendrier
     </a>
+    <button onclick="window.print()" class="inline-flex items-center gap-2 text-white bg-black/20 hover:bg-black/40 px-4 py-2 rounded-lg mb-6 ml-2 transition backdrop-blur-md font-semibold no-print">
+        <i class="ph ph-printer"></i> Imprimer
+    </button>
     {% if session.get('role') == 'admin' %}
     <a href="{{ url_for('admin.admin_edit_plant', plant_id=plant.id) }}" class="inline-flex items-center gap-2 text-white bg-blue-600/80 hover:bg-blue-700 px-4 py-2 rounded-lg mb-6 ml-2 transition backdrop-blur-md font-semibold">
         <i class="ph ph-pencil"></i> Modifier cette fiche

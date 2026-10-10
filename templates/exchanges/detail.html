@@ -4,6 +4,9 @@
     <a href="{{ url_for('exchange.exchanges') }}" class="inline-flex items-center gap-2 text-white bg-black/20 hover:bg-black/40 px-4 py-2 rounded-lg mb-4 transition">
         <i class="ph ph-arrow-left"></i> Retour aux annonces
     </a>
+    <button onclick="window.print()" class="inline-flex items-center gap-2 text-white bg-black/20 hover:bg-black/40 px-4 py-2 rounded-lg mb-4 ml-2 transition no-print">
+        <i class="ph ph-printer"></i> Imprimer
+    </button>
 
     <article class="glass rounded-3xl overflow-hidden">
         {% if photos %}
