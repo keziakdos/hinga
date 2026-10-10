@@ -693,3 +693,72 @@ def admin_listing_delete(listing_id):
           f"annonce {target['title'] if target else listing_id} supprimée (modération)")
     flash('Annonce supprimée.')
     return redirect(url_for('admin.admin_moderation'))
+
+# --- ANNONCES D'ACCUEIL (admin) ---
+@bp.route('/admin/annonces', methods=['GET', 'POST'])
+@login_required
+def admin_announcements():
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    db = get_db()
+    if request.method == 'POST':
+        from datetime import datetime
+        title = request.form.get('title', '').strip()[:120]
+        body = request.form.get('body', '').strip()[:1000]
+        if title:
+            today = datetime.now().strftime('%Y-%m-%d')
+            cur = db.execute("INSERT INTO site_announcements (title, body, active, created_at, updated_at) "
+                             "VALUES (?,?,1,?,?)", (title, body, today, today))
+            db.commit()
+            audit('annonce_create', 'announcement', cur.lastrowid, f"annonce accueil {title}")
+            flash('Annonce publiée sur l’accueil.')
+        return redirect(url_for('admin.admin_announcements'))
+    try:
+        items = db.execute('SELECT * FROM site_announcements ORDER BY id DESC').fetchall()
+    except sqlite3.OperationalError:
+        items = []
+    return render_template('admin/announcements.html', items=items)
+
+
+@bp.route('/admin/annonces/<int:item_id>/edit', methods=['GET', 'POST'])
+@login_required
+def admin_announcement_edit(item_id):
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    db = get_db()
+    item = db.execute('SELECT * FROM site_announcements WHERE id=?', (item_id,)).fetchone()
+    if item is None:
+        return redirect(url_for('admin.admin_announcements'))
+    if request.method == 'POST':
+        from datetime import datetime
+        title = request.form.get('title', '').strip()[:120]
+        body = request.form.get('body', '').strip()[:1000]
+        if title:
+            db.execute("UPDATE site_announcements SET title=?, body=?, updated_at=? WHERE id=?",
+                       (title, body, datetime.now().strftime('%Y-%m-%d'), item_id))
+            db.commit()
+            audit('annonce_edit', 'announcement', item_id, f"annonce {title} modifiée")
+            flash('Annonce mise à jour.')
+        return redirect(url_for('admin.admin_announcements'))
+    return render_template('admin/announcement_form.html', item=item)
+
+
+@bp.route('/admin/annonces/<int:item_id>/toggle', methods=['POST'])
+@login_required
+def admin_announcement_toggle(item_id):
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    db = get_db()
+    db.execute("UPDATE site_announcements SET active = 1 - active WHERE id=?", (item_id,))
+    db.commit()
+    audit('annonce_toggle', 'announcement', item_id, 'affichage basculé')
+    return redirect(url_for('admin.admin_announcements'))
+
+
+@bp.route('/admin/annonces/<int:item_id>/retirer')
+@login_required
+def admin_announcement_delete(item_id):
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    db = get_db()
+    db.execute('DELETE FROM site_announcements WHERE id=?', (item_id,))
+    db.commit()
+    audit('annonce_delete', 'announcement', item_id, 'annonce accueil supprimée')
+    flash('Annonce supprimée.')
+    return redirect(url_for('admin.admin_announcements'))

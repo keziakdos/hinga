@@ -1,0 +1,44 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Annonces d'accueil</h1>
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="text-gray-600 underline text-sm">← Admin</a>
+    </div>
+
+    {% for a in items %}
+    <div class="glass p-5 rounded-2xl mb-3 flex gap-3 items-start">
+        <div class="flex-grow">
+            <p class="font-bold">{{ a.title }}
+                {% if a.active %}
+                <span class="ml-2 text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">visible</span>
+                {% else %}
+                <span class="ml-2 text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">masquée</span>
+                {% endif %}
+            </p>
+            <p class="text-sm text-gray-600 whitespace-pre-line">{{ a.body }}</p>
+        </div>
+        <div class="flex flex-col gap-2 shrink-0">
+            <a href="{{ url_for('admin.admin_announcement_edit', item_id=a.id) }}" class="text-blue-600 text-sm font-bold">Modifier</a>
+            <form method="POST" action="{{ url_for('admin.admin_announcement_toggle', item_id=a.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="text-sm font-bold text-orange-700">{% if a.active %}Masquer{% else %}Afficher{% endif %}</button>
+            </form>
+            <a href="{{ url_for('admin.admin_announcement_delete', item_id=a.id) }}" onclick="return confirm('Supprimer ?')" class="text-red-600 text-sm">Suppr.</a>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-gray-500 italic glass p-6 rounded-2xl mb-4">Aucune annonce. L'accueil affiche le message par défaut.</p>
+    {% endfor %}
+
+    <div class="glass p-6 rounded-2xl h-fit mt-4">
+        <h2 class="text-lg font-bold text-green-900 mb-3">Nouvelle annonce</h2>
+        <form method="POST" class="space-y-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="title" placeholder="Titre (ex : Bourse aux graines samedi)" required class="w-full p-2 rounded bg-white/50 border border-white/30">
+            <textarea name="body" rows="3" placeholder="Texte…" class="w-full p-2 rounded bg-white/50 border border-white/30"></textarea>
+            <button class="w-full bg-green-700 text-white py-2 rounded-lg font-bold">Publier sur l'accueil</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
