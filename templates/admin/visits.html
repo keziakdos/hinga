@@ -1,0 +1,93 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6 pb-10">
+    <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-800">👁️ Visites : humains, robots, intrusions</h1>
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="text-gray-600 underline text-sm">← Admin</a>
+    </div>
+
+    {% if missing %}
+    <div class="glass p-8 rounded-2xl text-center">
+        <p class="text-gray-700">Log introuvable : <b class="font-mono">{{ missing }}</b></p>
+        <p class="text-sm text-gray-600 mt-2">Ajoutez <b class="font-mono">access_log /var/log/nginx/hinga.access.log;</b>
+        dans le bloc <b class="font-mono">server</b> de <b class="font-mono">hinga</b> (root), puis
+        <b class="font-mono">nginx -t && systemctl reload nginx</b>. En attendant :
+        <b class="font-mono">./scripts/analyse_visites.sh /var/log/nginx/access.log 7</b> depuis le dossier de l'app.</p>
+    </div>
+    {% else %}
+    <p class="text-xs text-gray-500">Source : {{ stats.log_path }} ({{ stats.total }} dernières requêtes analysées, lecture seule)</p>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold">{{ stats.total }}</span><span class="text-xs uppercase text-gray-500 font-bold">Requêtes</span></div>
+        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold text-green-700">{{ stats.humans }}</span><span class="text-xs uppercase text-gray-500 font-bold">Humains (est.)</span></div>
+        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold text-gray-600">{{ stats.bots }}</span><span class="text-xs uppercase text-gray-500 font-bold">Robots</span></div>
+        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold {% if stats.suspicious %}text-red-700{% else %}text-green-700{% endif %}">{{ stats.suspicious|length }}</span><span class="text-xs uppercase text-gray-500 font-bold">IP suspectes</span></div>
+    </div>
+
+    {% if stats.suspicious %}
+    <div class="glass p-6 rounded-2xl border-t-4 border-red-500">
+        <h2 class="text-xl font-bold text-red-800 mb-3">🚨 Adresses suspectes (tentatives de piratage ?)</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="text-xs uppercase text-gray-500 border-b border-gray-400/30">
+                    <tr><th class="p-2">IP</th><th class="p-2 text-center">Requêtes</th><th class="p-2 text-center">Erreurs</th><th class="p-2">Robot ?</th><th class="p-2">Pourquoi suspecte</th></tr>
+                </thead>
+                <tbody class="divide-y divide-gray-400/20">
+                    {% for s in stats.suspicious %}
+                    <tr class="hover:bg-white/30">
+                        <td class="p-2 font-mono font-bold">{{ s.ip }}</td>
+                        <td class="p-2 text-center">{{ s.n }}</td>
+                        <td class="p-2 text-center">{{ s.bad }}</td>
+                        <td class="p-2">{{ 'oui' if s.bot else 'non' }}</td>
+                        <td class="p-2">{{ s.reasons|join(' · ') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="text-xs text-gray-500 mt-3">En cas d'attaque persistante depuis une IP : bannissez-la côté frontal (demandez la procédure, ne touchez pas aux autres sites).</p>
+    </div>
+    {% endif %}
+
+    <div class="grid md:grid-cols-2 gap-6">
+        <div class="glass p-6 rounded-2xl">
+            <h2 class="font-bold text-green-900 mb-3 text-center">📄 Pages vues (humains)</h2>
+            <ul class="text-sm space-y-1">
+                {% for p, n in stats.top_pages %}
+                <li class="flex justify-between"><span class="font-mono truncate">{{ p }}</span><b>{{ n }}</b></li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div class="glass p-6 rounded-2xl">
+            <h2 class="font-bold text-green-900 mb-3 text-center">🌐 Top adresses IP</h2>
+            <ul class="text-sm space-y-1">
+                {% for ip, s in stats.top_ips %}
+                <li class="flex justify-between"><span class="font-mono">{{ ip }}</span><b>{{ s.n }}{% if s.bot %} 🤖{% endif %}</b></li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    {% if stats.recent %}
+    <div class="glass p-6 rounded-2xl">
+        <h2 class="font-bold text-green-900 mb-3">🔍 Sondes récentes (fichiers sensibles, injections)</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs font-mono">
+                <tbody class="divide-y divide-gray-400/20">
+                    {% for e in stats.recent %}
+                    <tr class="hover:bg-white/30">
+                        <td class="p-1 text-gray-500 whitespace-nowrap">{{ e.time }}</td>
+                        <td class="p-1 font-bold">{{ e.ip }}</td>
+                        <td class="p-1">{{ e.method }}</td>
+                        <td class="p-1 break-all">{{ e.path }}</td>
+                        <td class="p-1">{{ e.status }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

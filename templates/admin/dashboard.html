@@ -58,6 +58,12 @@
             <h2 class="text-xl font-bold text-gray-800">Accueil</h2>
             <p class="text-sm text-gray-600">Annonces page d'accueil</p>
         </a>
+
+        <a href="{{ url_for('admin.admin_visits') }}" class="glass p-8 rounded-2xl hover:bg-white/40 transition group">
+            <i class="ph ph-eye text-5xl text-purple-600 mb-4 group-hover:scale-110 transition"></i>
+            <h2 class="text-xl font-bold text-gray-800">Visites</h2>
+            <p class="text-sm text-gray-600">Humains, robots, intrusions</p>
+        </a>
     </div>
 </div>
 {% endblock %}
