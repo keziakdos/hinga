@@ -6,6 +6,7 @@
             <h1 class="text-2xl font-bold text-green-900">Modifier : {{ user.username }}</h1>
             <a href="{{ url_for('admin.admin_users') }}" class="text-gray-600 underline text-sm">Annuler</a>
         </div>
+        <p class="text-sm mb-4">Statut : <b>{{ user.status }}</b>{% if user.zone %} · Zone : {{ user.zone }}{% endif %}{% if user.created_at %} · Inscrit le {{ user.created_at }}{% endif %}</p>
 
         <form method="POST" class="space-y-4">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -31,7 +32,8 @@
                 <div>
                     <label class="font-bold text-gray-700 text-sm">Rôle</label>
                     <select name="role" class="w-full p-2 rounded bg-white/50 border border-white/30" {% if user.id == session['user_id'] %}disabled{% endif %}>
-                        <option value="user" {% if user.role == 'user' %}selected{% endif %}>Utilisateur</option>
+                        <option value="membre" {% if user.role == 'membre' %}selected{% endif %}>Membre</option>
+                        <option value="moderateur" {% if user.role == 'moderateur' %}selected{% endif %}>Modérateur</option>
                         <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
                     </select>
                 </div>
@@ -46,7 +48,11 @@
             <p class="text-xs text-gray-500 italic">Votre propre rôle et activation ne sont pas modifiables ici.</p>
             {% endif %}
             <div>
-                <label class="font-bold text-gray-700 text-sm">Nouveau mot de passe (vide = inchangé)</label>
+                <label class="font-bold text-gray-700 text-sm">Motif (refus / suspension, visible par le membre)</label>
+                <input type="text" name="motif" value="{{ user.motif or '' }}" class="w-full p-2 rounded bg-white/50 border border-white/30">
+            </div>
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Nouveau mot de passe (vide = inchangé, 8 min.)</label>
                 <input type="password" name="new_password" placeholder="Laisser vide pour conserver" class="w-full p-2 rounded bg-white/50 border border-white/30">
             </div>
             <button type="submit" class="w-full bg-green-700 text-white py-3 rounded-xl font-bold">Enregistrer</button>

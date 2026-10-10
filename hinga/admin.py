@@ -10,9 +10,22 @@ from hinga.auth import login_required
 from hinga.db import get_db
 from hinga.helpers import MOIS_FR, PLANT_TYPES, unique_filename
 from hinga.services.images import is_managed_image, save_tip_image, thumb_name  # noqa: F401
-from hinga.utils import _delete_managed_image, _tip_thumb, allowed_file  # noqa: F401
+from hinga.utils import _delete_managed_image, _tip_thumb, allowed_file, audit  # noqa: F401
+from hinga.utils import valid_email, valid_password, valid_username
 
 bp = Blueprint('admin', __name__)
+
+ROLES = ('membre', 'moderateur', 'admin')
+
+
+def active_admin_count(db):
+    return db.execute("SELECT COUNT(*) FROM users WHERE role='admin' AND is_active=1").fetchone()[0]
+
+
+def is_last_admin(db, user_id):
+    row = db.execute("SELECT role, is_active FROM users WHERE id=?", (user_id,)).fetchone()
+    return bool(row and row['role'] == 'admin' and row['is_active']
+                and active_admin_count(db) <= 1)
 
 # --- SECTION ADMINISTRATION ---
 
@@ -24,36 +37,88 @@ def admin_dashboard():
         return redirect(url_for('garden.index'))
     return render_template('admin/dashboard.html')
 
-# --- GESTION UTILISATEURS ---
+# --- GESTION UTILISATEURS & MEMBRES (V2.1 : approbation, rôles, audit) ---
 @bp.route('/admin/users', methods=['GET', 'POST'])
 @login_required
 def admin_users():
     if session.get('role') != 'admin': return redirect(url_for('garden.index'))
     db = get_db()
-    
+
     if request.method == 'POST':
-        # Création d'un utilisateur
+        # Création directe par un admin (compte approuvé d'office)
+        import uuid as uuidlib
+        from datetime import datetime
         username = request.form['username'].strip()
         password = request.form['password']
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
         email = request.form.get('email', '').strip()
         notes = request.form.get('notes', '').strip()
-        # Vérif si existe déjà
         exist = db.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
         if exist:
             flash('Ce nom d\'utilisateur existe déjà.')
+        elif not valid_username(username):
+            flash('Pseudo invalide (3-30 lettres, chiffres, . _ -).')
+        elif not valid_password(password):
+            flash('Mot de passe trop court (8 caractères minimum).')
+        elif email and not valid_email(email):
+            flash('Email invalide.')
         else:
             pwd_hash = generate_password_hash(password)
-            db.execute('''INSERT INTO users (username, password, role, first_name, last_name, email, notes, is_active)
-                          VALUES (?, ?, 'user', ?, ?, ?, ?, 1)''',
-                       (username, pwd_hash, first_name, last_name, email, notes))
+            today = datetime.now().strftime('%Y-%m-%d')
+            cur = db.execute('''INSERT INTO users (username, password, role, first_name, last_name,
+                              email, notes, is_active, status, created_at, uuid)
+                              VALUES (?, ?, 'membre', ?, ?, ?, ?, 1, 'approved', ?, ?)''',
+                       (username, pwd_hash, first_name, last_name, email, notes, today, uuidlib.uuid4().hex))
             db.commit()
+            audit('user_create', 'user', cur.lastrowid, f"création de {username}")
             flash(f'Utilisateur {username} créé !')
         return redirect(url_for('admin.admin_users'))
-        
-    users = db.execute('SELECT * FROM users').fetchall()
-    return render_template('admin/users.html', users=users)
+
+    pending = db.execute("SELECT * FROM users WHERE status='pending' ORDER BY created_at").fetchall()
+    refused = db.execute("SELECT * FROM users WHERE status='refused' ORDER BY created_at DESC").fetchall()
+    suspended = db.execute("SELECT * FROM users WHERE status='suspended' ORDER BY username").fetchall()
+    members = db.execute("SELECT * FROM users WHERE status='approved' ORDER BY username").fetchall()
+    return render_template('admin/users.html', pending=pending, refused=refused,
+                           suspended=suspended, members=members)
+
+
+@bp.route('/admin/users/status/<int:user_id>', methods=['POST'])
+@login_required
+def admin_user_status(user_id):
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    db = get_db()
+    target = db.execute('SELECT username, status FROM users WHERE id=?', (user_id,)).fetchone()
+    if target is None:
+        flash("Utilisateur introuvable.")
+        return redirect(url_for('admin.admin_users'))
+    do = request.form.get('do', '')
+    motif = request.form.get('motif', '').strip()[:300]
+    name = target['username']
+    if do == 'approve':
+        db.execute("UPDATE users SET status='approved', is_active=1, motif='' WHERE id=?", (user_id,))
+        db.commit()
+        audit('user_approve', 'user', user_id, f"approbation de {name}")
+        flash(f'{name} approuvé, bienvenue !')
+    elif do == 'refuse':
+        db.execute("UPDATE users SET status='refused', motif=? WHERE id=?", (motif, user_id))
+        db.commit()
+        audit('user_refuse', 'user', user_id, f"refus de {name} : {motif}")
+        flash(f'Demande de {name} refusée.')
+    elif do == 'suspend':
+        if is_last_admin(db, user_id):
+            flash('Impossible : dernier administrateur.')
+        else:
+            db.execute("UPDATE users SET status='suspended', is_active=0, motif=? WHERE id=?", (motif, user_id))
+            db.commit()
+            audit('user_suspend', 'user', user_id, f"suspension de {name} : {motif}")
+            flash(f'{name} suspendu.')
+    elif do == 'reactivate':
+        db.execute("UPDATE users SET status='approved', is_active=1, motif='' WHERE id=?", (user_id,))
+        db.commit()
+        audit('user_reactivate', 'user', user_id, f"réactivation de {name}")
+        flash(f'{name} réactivé.')
+    return redirect(url_for('admin.admin_users'))
 
 @bp.route('/admin/users/edit/<int:user_id>', methods=['GET', 'POST'])
 @login_required
@@ -69,23 +134,41 @@ def admin_edit_user(user_id):
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
         email = request.form.get('email', '').strip()
+        if email and not valid_email(email):
+            flash('Email invalide.')
+            return redirect(url_for('admin.admin_edit_user', user_id=user_id))
         notes = request.form.get('notes', '').strip()
-        role = request.form.get('role', 'user')
-        if role not in ('admin', 'user'):
-            role = 'user'
+        motif = request.form.get('motif', '').strip()[:300]
+        role = request.form.get('role', 'membre')
+        if role not in ROLES:
+            role = user['role'] if user['role'] in ROLES else 'membre'
         # Impossible de désactiver son propre compte ou de se rétrograder
         if user_id == session['user_id']:
             is_active = 1
             role = user['role']
         else:
             is_active = 1 if request.form.get('is_active') else 0
-        db.execute('''UPDATE users SET first_name=?, last_name=?, email=?, notes=?, role=?, is_active=?
-                      WHERE id=?''', (first_name, last_name, email, notes, role, is_active, user_id))
+            if user['role'] == 'admin' and role != 'admin' and is_last_admin(db, user_id):
+                flash('Impossible : dernier administrateur.')
+                return redirect(url_for('admin.admin_users'))
+            if not is_active and is_last_admin(db, user_id):
+                flash('Impossible : dernier administrateur.')
+                return redirect(url_for('admin.admin_users'))
+        old_role = user['role']
+        db.execute('''UPDATE users SET first_name=?, last_name=?, email=?, notes=?, motif=?, role=?, is_active=?
+                      WHERE id=?''', (first_name, last_name, email, notes, motif, role, is_active, user_id))
+        if old_role != role:
+            audit('user_role', 'user', user_id, f"{user['username']} : {old_role} -> {role}")
         new_password = request.form.get('new_password', '')
         if new_password:
-            db.execute('UPDATE users SET password=? WHERE id=?',
-                       (generate_password_hash(new_password), user_id))
+            if not valid_password(new_password):
+                flash('Nouveau mot de passe trop court (8 minimum), non modifié.')
+            else:
+                db.execute('UPDATE users SET password=? WHERE id=?',
+                           (generate_password_hash(new_password), user_id))
+                audit('user_password', 'user', user_id, f"mot de passe redéfini pour {user['username']}")
         db.commit()
+        audit('user_edit', 'user', user_id, f"fiche de {user['username']} mise à jour")
         flash('Utilisateur mis à jour.')
         return redirect(url_for('admin.admin_users'))
 
@@ -95,15 +178,36 @@ def admin_edit_user(user_id):
 @login_required
 def admin_delete_user(user_id):
     if session.get('role') != 'admin': return redirect(url_for('garden.index'))
-    # On empêche de se supprimer soi-même
+    # On empêche de se supprimer soi-même, ainsi que le dernier admin
     if user_id == session['user_id']:
         flash('Impossible de supprimer votre propre compte ici.')
     else:
         db = get_db()
-        db.execute('DELETE FROM users WHERE id = ?', (user_id,))
-        db.commit()
-        flash('Utilisateur supprimé.')
+        target = db.execute('SELECT username FROM users WHERE id=?', (user_id,)).fetchone()
+        if target is None:
+            flash("Utilisateur introuvable.")
+        elif is_last_admin(db, user_id):
+            flash('Impossible : dernier administrateur.')
+        else:
+            db.execute('DELETE FROM users WHERE id = ?', (user_id,))
+            db.commit()
+            audit('user_delete', 'user', user_id, f"suppression de {target['username']}")
+            flash('Utilisateur supprimé.')
     return redirect(url_for('admin.admin_users'))
+
+
+@bp.route('/admin/audit')
+@login_required
+def admin_audit():
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    db = get_db()
+    try:
+        entries = db.execute('''SELECT a.*, u.username AS actor FROM audit_log a
+                                LEFT JOIN users u ON a.actor_id = u.id
+                                ORDER BY a.id DESC LIMIT 200''').fetchall()
+    except sqlite3.OperationalError:
+        entries = []
+    return render_template('admin/audit.html', entries=entries)
 
 # --- GESTION PLANTES ---
 @bp.route('/admin/plants')
@@ -176,6 +280,7 @@ def admin_edit_plant(plant_id=None):
                        (name, ptype, sow_start, sow_end, har_start, har_end, details, conditions, roots, image_filename, 
                         sec_sun, sec_soil, sec_water, sec_sowing, sec_diseases, sec_harvest, plant_id))
             flash('Plante modifiée avec succès.')
+            audit('plant_edit', 'plant', plant_id, f"fiche {name} modifiée")
         else:
             # INSERT AVEC LES NOUVEAUX CHAMPS
             if not image_filename: image_filename = 'default.jpg'
@@ -185,6 +290,7 @@ def admin_edit_plant(plant_id=None):
                        (name, ptype, sow_start, sow_end, har_start, har_end, details, conditions, roots, image_filename,
                         sec_sun, sec_soil, sec_water, sec_sowing, sec_diseases, sec_harvest))
             flash('Nouvelle plante ajoutée.')
+            audit('plant_create', 'plant', None, f"fiche {name} créée")
         db.commit()
         return redirect(url_for('admin.admin_plants'))
 
@@ -209,8 +315,10 @@ def admin_edit_plant(plant_id=None):
 def admin_delete_plant(plant_id):
     if session.get('role') != 'admin': return redirect(url_for('garden.index'))
     db = get_db()
+    target = db.execute('SELECT name FROM plants WHERE id=?', (plant_id,)).fetchone()
     db.execute('DELETE FROM plants WHERE id = ?', (plant_id,))
     db.commit()
+    audit('plant_delete', 'plant', plant_id, f"fiche {target['name'] if target else plant_id} supprimée")
     flash('Plante supprimée.')
     return redirect(url_for('admin.admin_plants'))
 
@@ -250,6 +358,7 @@ def admin_tips():
             db.execute('INSERT INTO tips (title, content, image) VALUES (?,?,?)',
                        (title, content, image_filename))
         db.commit()
+        audit('tip_create', 'tip', None, f"conseil {title} créé")
         flash('Conseil ajouté.')
         return redirect(url_for('admin.admin_tips'))
 
@@ -296,6 +405,7 @@ def admin_edit_tip(tip_id):
             db.execute('UPDATE tips SET title=?, content=?, image=? WHERE id=?',
                        (title, content, image_filename, tip_id))
         db.commit()
+        audit('tip_edit', 'tip', tip_id, f"conseil {title} modifié")
         flash('Conseil modifié.')
         return redirect(url_for('admin.admin_tips'))
 
@@ -312,6 +422,7 @@ def admin_tip_categories():
             try:
                 db.execute('INSERT INTO tip_categories (name) VALUES (?)', (name,))
                 db.commit()
+                audit('tipcat_create', 'tip_category', None, f"catégorie {name} créée")
                 flash('Catégorie créée.')
             except sqlite3.IntegrityError:
                 flash('Cette catégorie existe déjà.')
@@ -328,6 +439,7 @@ def admin_edit_tip_category(cat_id):
         try:
             db.execute('UPDATE tip_categories SET name=? WHERE id=?', (name, cat_id))
             db.commit()
+            audit('tipcat_rename', 'tip_category', cat_id, f"renommée en {name}")
             flash('Catégorie renommée.')
         except sqlite3.IntegrityError:
             flash('Ce nom de catégorie existe déjà.')
@@ -344,6 +456,7 @@ def admin_delete_tip_category(cat_id):
         pass
     db.execute('DELETE FROM tip_categories WHERE id=?', (cat_id,))
     db.commit()
+    audit('tipcat_delete', 'tip_category', cat_id, 'catégorie supprimée')
     flash('Catégorie supprimée (les conseils sont conservés).')
     return redirect(url_for('admin.admin_tip_categories'))
 
@@ -352,8 +465,10 @@ def admin_delete_tip_category(cat_id):
 def admin_delete_tip(tip_id):
     if session.get('role') != 'admin': return redirect(url_for('garden.index'))
     db = get_db()
+    target = db.execute('SELECT title FROM tips WHERE id=?', (tip_id,)).fetchone()
     db.execute('DELETE FROM tips WHERE id = ?', (tip_id,))
     db.commit()
+    audit('tip_delete', 'tip', tip_id, f"conseil {target['title'] if target else tip_id} supprimé")
     flash('Conseil supprimé.')
     return redirect(url_for('admin.admin_tips'))
 

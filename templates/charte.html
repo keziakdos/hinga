@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto pb-10">
+    <div class="glass p-8 rounded-3xl">
+        <h1 class="text-3xl font-bold text-green-900 mb-6">📜 Charte de la communauté Hinga</h1>
+        <div class="space-y-4 text-gray-800 leading-relaxed">
+            <p><b>1. Bienveillance.</b> Hinga est un lieu d'entraide entre jardiniers, sans but lucratif, sans publicité, sans revente de données.</p>
+            <p><b>2. Vie privée.</b> Ne communiquez jamais votre adresse exacte publiquement : indiquez seulement votre ville ou région. Convenez du lieu de rencontre en privé.</p>
+            <p><b>3. Rencontres.</b> Préférez les lieux publics, prévenez un proche, et signalez tout comportement inapproprié aux administrateurs.</p>
+            <p><b>4. Échanges de bonne foi.</b> Décrivez honnêtement ce que vous donnez (quantité, état, origine des semences). Les échanges de nourriture exigent hygiène et traçabilité ; renseignez-vous sur les espèces invasives ou interdites avant d'échanger des plantes.</p>
+            <p><b>5. Modération.</b> Les administrateurs peuvent masquer ou supprimer tout contenu contraire à cette charte, et suspendre un compte après avertissement. En cas de désaccord, écrivez-leur calmement.</p>
+            <p><b>6. Données.</b> Vos données servent uniquement au fonctionnement du site. Vous pouvez demander leur export ou leur suppression à un administrateur.</p>
+        </div>
+        <a href="{{ url_for('auth.register') }}" class="inline-block mt-6 px-5 py-2 rounded-xl bg-green-700 hover:bg-green-800 text-white font-bold transition">Revenir à l'inscription</a>
+    </div>
+</div>
+{% endblock %}

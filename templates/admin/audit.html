@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">Journal d'audit</h1>
+        <a href="{{ url_for('admin.admin_users') }}" class="text-gray-600 underline text-sm">← Membres</a>
+    </div>
+    <div class="glass p-6 rounded-2xl overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="text-xs uppercase text-gray-500 border-b border-gray-400/30">
+                <tr><th class="p-2">Quand</th><th class="p-2">Par</th><th class="p-2">Action</th><th class="p-2">Détail</th></tr>
+            </thead>
+            <tbody class="divide-y divide-gray-400/20">
+                {% for e in entries %}
+                <tr class="hover:bg-white/20">
+                    <td class="p-2 whitespace-nowrap text-gray-600">{{ e.created_at }}</td>
+                    <td class="p-2 font-bold">{{ e.actor or '?' }}</td>
+                    <td class="p-2"><span class="text-xs bg-gray-200 px-2 rounded font-mono">{{ e.action }}</span>
+                        <span class="text-xs text-gray-500">{{ e.target_kind }} {{ e.target_id or '' }}</span></td>
+                    <td class="p-2 text-gray-700">{{ e.details }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="p-4 text-center text-gray-500 italic">Aucune action tracée pour le moment.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
