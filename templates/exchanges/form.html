@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-xl mx-auto pb-10">
+    <div class="glass p-8 rounded-3xl">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-green-900">{% if listing %}Modifier l'annonce{% else %}Nouvelle annonce{% endif %}</h1>
+            <a href="{{ url_for('exchange.exchanges') }}" class="text-gray-600 underline text-sm">Annuler</a>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="font-bold text-gray-700 text-sm">Type *</label>
+                    <select name="kind" class="w-full p-2 rounded bg-white/50 border border-white/30">
+                        {% for val, label in kinds %}
+                        <option value="{{ val }}" {% if listing and listing.kind == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="font-bold text-gray-700 text-sm">Catégorie</label>
+                    <select name="category_id" class="w-full p-2 rounded bg-white/50 border border-white/30">
+                        <option value="">— Choisir —</option>
+                        {% for c in categories %}
+                        <option value="{{ c.id }}" {% if listing and listing.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Titre *</label>
+                <input type="text" name="title" value="{{ listing.title if listing else '' }}" required class="w-full p-2 rounded bg-white/50 border border-white/30">
+            </div>
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Description *</label>
+                <textarea name="description" rows="5" required class="w-full p-2 rounded bg-white/50 border border-white/30">{{ listing.description if listing else '' }}</textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="font-bold text-gray-700 text-sm">Quantité</label>
+                    <input type="text" name="quantity" value="{{ listing.quantity if listing else '' }}" placeholder="Ex : 3 godets" class="w-full p-2 rounded bg-white/50 border border-white/30">
+                </div>
+                <div>
+                    <label class="font-bold text-gray-700 text-sm">Zone (ville/région)</label>
+                    <input type="text" name="zone" value="{{ listing.zone if listing else my_zone }}" placeholder="Jamais d'adresse exacte" class="w-full p-2 rounded bg-white/50 border border-white/30">
+                </div>
+            </div>
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Disponible jusqu'au (optionnel)</label>
+                <input type="date" name="available_until" value="{{ listing.available_until if listing and listing.available_until else '' }}" class="w-full p-2 rounded bg-white/50 border border-white/30">
+            </div>
+            <div>
+                <label class="font-bold text-gray-700 text-sm">Photos (max 4, JPG/PNG/WEBP/GIF, 10 Mo)</label>
+                <input type="file" name="photos" multiple accept="image/jpeg,image/png,image/webp,image/gif" class="w-full p-2 bg-white/50 rounded">
+            </div>
+            <button type="submit" class="w-full bg-green-700 text-white py-3 rounded-xl font-bold">{% if listing %}Enregistrer{% else %}Publier{% endif %}</button>
+        </form>
+
+        {% if listing and photos %}
+        <div class="mt-6">
+            <h3 class="font-bold text-gray-700 text-sm mb-2">Photos actuelles</h3>
+            <div class="flex gap-2 flex-wrap">
+                {% for p in photos %}
+                <div class="relative">
+                    <img src="{{ url_for('static', filename='img/' + p.thumb) }}" class="w-20 h-20 object-cover rounded-lg" onerror="this.style.display='none'">
+                    <a href="{{ url_for('exchange.exchange_photo_delete', photo_id=p.id) }}" onclick="return confirm('Supprimer cette photo ?')" class="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full text-xs flex items-center justify-center" title="Supprimer">×</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

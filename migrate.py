@@ -11,6 +11,8 @@ Ne supprime rien. Ajoute uniquement :
 - rôles : 'user' historique -> 'membre' (admin inchangé)
 - audit_log(id, actor_id, action, target_kind, target_id, details, created_at)
 - tip_categories(id, name UNIQUE) + tips.category_id (+ 4 catégories de base)
+- V2.2 annonces : listing_categories(id, uuid, name, parent_id, position, active,
+  created_at) + jeu de départ ; listings + listing_photos ; reports
 Sauvegarde auto dans backup/ avant toute écriture.
 """
 import argparse
@@ -25,6 +27,15 @@ DEFAULT_DB = os.path.join(BASEDIR, "hinga.db")
 BACKUP_DIR = os.path.join(BASEDIR, "backup")
 
 BASE_CATEGORIES = ["Sol", "Eau", "Plantation", "Entretien"]
+
+LISTING_CATEGORIES = [
+    "Plantes, boutures et plants",
+    "Semis et graines",
+    "Récoltes en surplus",
+    "Nourriture et conserves",
+    "Matériel et outils",
+    "Autres",
+]
 
 
 def columns(conn, table):
@@ -91,6 +102,61 @@ def migrate(db_path: str) -> None:
                 actor_id INTEGER, action TEXT NOT NULL,
                 target_kind TEXT DEFAULT '', target_id INTEGER,
                 details TEXT DEFAULT '', created_at TEXT
+            )"""
+        )
+
+        # --- V2.2 : catégories d'annonces + jeu de départ ---
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS listing_categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                uuid TEXT DEFAULT '', name TEXT NOT NULL,
+                parent_id INTEGER, position INTEGER DEFAULT 0,
+                active INTEGER DEFAULT 1, created_at TEXT
+            )"""
+        )
+        lcols = columns(conn, "listing_categories")
+        if "uuid" not in lcols:
+            conn.execute("ALTER TABLE listing_categories ADD COLUMN uuid TEXT DEFAULT ''")
+        today = datetime.now().strftime('%Y-%m-%d')
+        pos = conn.execute("SELECT COUNT(*) FROM listing_categories").fetchone()[0]
+        for cat in LISTING_CATEGORIES:
+            if not conn.execute("SELECT id FROM listing_categories WHERE name=? AND parent_id IS NULL",
+                                (cat,)).fetchone():
+                conn.execute("""INSERT INTO listing_categories (uuid, name, parent_id, position, active, created_at)
+                                VALUES (?,?,?,?,1,?)""", (uuidlib.uuid4().hex, cat, None, pos, today))
+                pos += 1
+                print(f"+ catégorie annonce : {cat}")
+        for (cid,) in conn.execute("SELECT id FROM listing_categories WHERE uuid IS NULL OR uuid=''").fetchall():
+            conn.execute("UPDATE listing_categories SET uuid=? WHERE id=?", (uuidlib.uuid4().hex, cid))
+
+        # --- V2.2 : annonces + photos + signalements ---
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS listings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                uuid TEXT DEFAULT '', user_id INTEGER NOT NULL,
+                kind TEXT NOT NULL, category_id INTEGER,
+                title TEXT NOT NULL, description TEXT DEFAULT '',
+                quantity TEXT DEFAULT '', zone TEXT DEFAULT '',
+                available_from TEXT DEFAULT '', available_until TEXT DEFAULT '',
+                status TEXT DEFAULT 'disponible',
+                views INTEGER DEFAULT 0, created_at TEXT, updated_at TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS listing_photos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+                filename TEXT NOT NULL, position INTEGER DEFAULT 0
+            )"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                reporter_id INTEGER, target_kind TEXT NOT NULL,
+                target_id INTEGER NOT NULL, reason TEXT NOT NULL,
+                details TEXT DEFAULT '', status TEXT DEFAULT 'open',
+                created_at TEXT
             )"""
         )
 

@@ -488,3 +488,97 @@ def admin_delete_tip(tip_id):
 
 
 
+
+# --- CATEGORIES D'ANNONCES (V2.2 : ordre, actif, sous-catégories) ---
+def _listing_cats(db):
+    try:
+        return db.execute("SELECT * FROM listing_categories ORDER BY position, name").fetchall()
+    except sqlite3.OperationalError:
+        return []
+
+
+@bp.route('/admin/annonces-categories', methods=['GET', 'POST'])
+@login_required
+def admin_listing_categories():
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    db = get_db()
+    if request.method == 'POST':
+        import uuid as uuidlib
+        from datetime import datetime
+        name = request.form.get('name', '').strip()[:80]
+        parent_raw = request.form.get('parent_id', '')
+        parent_id = int(parent_raw) if parent_raw.isdigit() else None
+        if name:
+            pos = db.execute("SELECT COALESCE(MAX(position), -1)+1 FROM listing_categories").fetchone()[0]
+            db.execute("""INSERT INTO listing_categories (uuid, name, parent_id, position, active, created_at)
+                          VALUES (?,?,?,?,1,?)""",
+                       (uuidlib.uuid4().hex, name, parent_id, pos,
+                        datetime.now().strftime('%Y-%m-%d')))
+            db.commit()
+            audit('lcat_create', 'listing_category', None, f"catégorie annonce {name} créée")
+            flash('Catégorie créée.')
+        return redirect(url_for('admin.admin_listing_categories'))
+    cats = _listing_cats(db)
+    by_id = {c['id']: dict(c) for c in cats}
+    for c in by_id.values():
+        c['children'] = [x for x in cats if x['parent_id'] == c['id']]
+    roots = [by_id[c['id']] for c in cats if not c['parent_id']]
+    return render_template('admin/listing_categories.html', roots=roots)
+
+
+@bp.route('/admin/annonces-categories/edit/<int:cat_id>', methods=['POST'])
+@login_required
+def admin_edit_listing_category(cat_id):
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    db = get_db()
+    name = request.form.get('name', '').strip()[:80]
+    parent_raw = request.form.get('parent_id', '')
+    parent_id = int(parent_raw) if parent_raw.isdigit() else None
+    active = 1 if request.form.get('active') else 0
+    if parent_id == cat_id:
+        parent_id = None
+    if name:
+        db.execute("UPDATE listing_categories SET name=?, parent_id=?, active=? WHERE id=?",
+                   (name, parent_id, active, cat_id))
+        db.commit()
+        audit('lcat_edit', 'listing_category', cat_id, f"renommée en {name}")
+        flash('Catégorie mise à jour.')
+    return redirect(url_for('admin.admin_listing_categories'))
+
+
+@bp.route('/admin/annonces-categories/move/<int:cat_id>', methods=['POST'])
+@login_required
+def admin_move_listing_category(cat_id):
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    db = get_db()
+    direction = request.form.get('dir', 'up')
+    cats = list(db.execute("SELECT id, position FROM listing_categories ORDER BY position").fetchall())
+    ids = [c['id'] for c in cats]
+    if cat_id in ids:
+        i = ids.index(cat_id)
+        j = i - 1 if direction == 'up' else i + 1
+        if 0 <= j < len(ids):
+            a, b = cats[i], cats[j]
+            db.execute("UPDATE listing_categories SET position=? WHERE id=?", (b['position'], a['id']))
+            db.execute("UPDATE listing_categories SET position=? WHERE id=?", (a['position'], b['id']))
+            db.commit()
+    return redirect(url_for('admin.admin_listing_categories'))
+
+
+@bp.route('/admin/annonces-categories/delete/<int:cat_id>')
+@login_required
+def admin_delete_listing_category(cat_id):
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    db = get_db()
+    kids = db.execute("SELECT COUNT(*) FROM listing_categories WHERE parent_id=?", (cat_id,)).fetchone()[0]
+    used = db.execute("SELECT COUNT(*) FROM listings WHERE category_id=?", (cat_id,)).fetchone()[0]
+    if kids:
+        flash('Impossible : cette catégorie a des sous-catégories.')
+    elif used:
+        flash(f'Impossible : {used} annonce(s) utilisent cette catégorie.')
+    else:
+        db.execute('DELETE FROM listing_categories WHERE id=?', (cat_id,))
+        db.commit()
+        audit('lcat_delete', 'listing_category', cat_id, 'catégorie annonce supprimée')
+        flash('Catégorie supprimée.')
+    return redirect(url_for('admin.admin_listing_categories'))
