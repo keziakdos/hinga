@@ -4,6 +4,7 @@ from functools import wraps
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
+from hinga import limiter
 from hinga.db import get_db
 
 bp = Blueprint('auth', __name__)
@@ -20,6 +21,7 @@ def login_required(f):
 
 # --- ROUTES AUTHENTIFICATION ---
 @bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit('20/minute')
 def login():
     if request.method == 'POST':
         username = request.form['username']

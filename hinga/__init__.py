@@ -32,6 +32,18 @@ basedir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static')
 app.config['DATABASE'] = os.path.join(basedir, 'hinga.db')
 
+# Sessions : HttpOnly + SameSite stricts ; Secure en prod (SESSION_COOKIE_SECURE=1).
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', '0') == '1'
+
+from flask_limiter import Limiter  # noqa: E402
+from flask_limiter.util import get_remote_address  # noqa: E402
+from flask_wtf import CSRFProtect  # noqa: E402
+
+csrf = CSRFProtect(app)
+limiter = Limiter(get_remote_address, app=app)
+
 from hinga.db import close_connection  # noqa: E402
 app.teardown_appcontext(close_connection)
 
@@ -49,3 +61,8 @@ def page_not_found(e):
 @app.errorhandler(500)
 def internal_server_error(e):
     return render_template('500.html'), 500
+
+
+@app.errorhandler(429)
+def too_many_requests(e):
+    return render_template('429.html'), 429

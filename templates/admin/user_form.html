@@ -8,6 +8,7 @@
         </div>
 
         <form method="POST" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="font-bold text-gray-700 text-sm">Prénom</label>
