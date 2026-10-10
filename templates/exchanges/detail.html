@@ -41,6 +41,12 @@
                     <button class="px-4 py-2 rounded-xl bg-green-700 text-white font-bold text-sm">Marquer terminée</button>
                 </form>
                 {% endif %}
+                {% if listing.status == 'masquee' and session.get('role') in ('admin', 'moderateur') %}
+                <form method="POST" action="{{ url_for('admin.admin_listing_unhide', listing_id=listing.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="px-4 py-2 rounded-xl bg-green-100 text-green-800 border border-green-300 font-bold text-sm">Démasquer</button>
+                </form>
+                {% endif %}
                 {% endif %}
                 {% if session.get('user_id') and not mine %}
                 <a href="{{ url_for('social.new_conversation', annonce=listing.id) }}" class="px-4 py-2 rounded-xl bg-green-700 text-white font-bold text-sm">Contacter {{ listing.owner }}</a>

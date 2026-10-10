@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">🛡️ Modération ({{ reports|length }} ouvert(s))</h1>
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="text-gray-600 underline text-sm">← Admin</a>
+    </div>
+    {% for r in reports %}
+    <div class="glass p-5 rounded-2xl mb-4">
+        <p class="font-bold">{{ r.reason }} <span class="text-xs text-gray-500 font-normal">signalé par {{ r.reporter or '?' }} le {{ r.created_at }}</span></p>
+        {% if r.target_kind == 'listing' %}
+        <p class="text-sm mt-1">Annonce : {% if r.listing_title %}<a href="{{ url_for('exchange.exchange_detail', listing_id=r.target_id) }}" class="underline font-bold">{{ r.listing_title }}</a> ({{ r.listing_owner }}, {{ r.listing_status }}){% else %}supprimée{% endif %}</p>
+        {% elif r.target_kind == 'journal' %}
+        <p class="text-sm mt-1">Billet : <a href="{{ url_for('social.journal_detail', post_id=r.target_id) }}" class="underline font-bold">voir</a> — {{ r.journal_text or '(supprimé)' }}</p>
+        {% endif %}
+        <div class="flex flex-wrap gap-2 mt-3">
+            <form method="POST" action="{{ url_for('admin.admin_report_close', report_id=r.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="px-3 py-1 rounded-lg bg-white/50 font-bold text-sm">Classer sans suite</button>
+            </form>
+            {% if r.target_kind == 'listing' and r.listing_title %}
+            <form method="POST" action="{{ url_for('admin.admin_report_hide', report_id=r.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="px-3 py-1 rounded-lg bg-orange-100 text-orange-800 border border-orange-300 font-bold text-sm" onclick="return confirm('Masquer cette annonce ?')">Masquer</button>
+            </form>
+            {% if r.listing_status == 'masquee' %}
+            <form method="POST" action="{{ url_for('admin.admin_listing_unhide', listing_id=r.target_id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="px-3 py-1 rounded-lg bg-green-100 text-green-800 border border-green-300 font-bold text-sm">Démasquer</button>
+            </form>
+            {% endif %}
+            {% if session.get('role') == 'admin' and r.listing_title %}
+            <a href="{{ url_for('admin.admin_listing_delete', listing_id=r.target_id) }}" onclick="return confirm('Supprimer définitivement ?')" class="px-3 py-1 rounded-lg bg-red-100 text-red-700 border border-red-300 font-bold text-sm">Supprimer</a>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <p class="text-center text-gray-500 italic glass p-8 rounded-2xl">Aucun signalement en attente. 🎉</p>
+    {% endfor %}
+</div>
+{% endblock %}

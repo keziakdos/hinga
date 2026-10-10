@@ -20,6 +20,17 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+
+def staff_required(f):
+    """Modération : admin ou modérateur (destructif = admin seul, voir admin.py)."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('role') not in ('admin', 'moderateur'):
+            flash('Réservé à la modération.')
+            return redirect(url_for('garden.index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # --- ROUTES AUTHENTIFICATION ---
 @bp.route('/login', methods=['GET', 'POST'])
 @limiter.limit('20/minute')
