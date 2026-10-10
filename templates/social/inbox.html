@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-3xl mx-auto pb-10">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">💬 Mes messages</h1>
+        <div class="flex gap-3 items-center">
+            <a href="{{ url_for('social.notifications') }}" class="text-sm font-bold text-green-800 underline">Notifications{% if unread_notif %} ({{ unread_notif }}){% endif %}</a>
+            <a href="{{ url_for('social.new_conversation') }}" class="bg-green-700 text-white px-4 py-2 rounded-lg font-bold text-sm">+ Nouveau</a>
+        </div>
+    </div>
+    {% if convs %}
+    <ul class="space-y-3">
+        {% for c in convs %}
+        <li>
+            <a href="{{ url_for('social.thread', conv_id=c.id) }}" class="glass p-4 rounded-2xl flex gap-3 items-center hover:bg-white/40 transition {% if c.unread %}border-l-4 border-green-600{% endif %}">
+                <span class="w-12 h-12 flex items-center justify-center bg-green-100/60 rounded-full text-2xl shrink-0">💬</span>
+                <div class="flex-grow min-w-0">
+                    <span class="font-bold">{{ c.other_name }}</span>
+                    {% if c.unread %}<span class="ml-2 text-xs bg-green-600 text-white px-2 py-0.5 rounded-full font-bold">{{ c.unread }} nouveau(x)</span>{% endif %}
+                    <span class="block text-sm text-gray-600 truncate">{{ c.last_body or '—' }}</span>
+                </div>
+                <span class="text-xs text-gray-500 shrink-0">{{ c.updated_at }}</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-center text-gray-500 italic glass p-8 rounded-2xl">Aucune conversation. Écrivez à un jardinier depuis son profil ou une annonce !</p>
+    {% endif %}
+</div>
+{% endblock %}

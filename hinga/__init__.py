@@ -22,9 +22,26 @@ app.secret_key = _secret
 
 @app.context_processor
 def inject_helpers():
+    from flask import session
+    unread_msg, unread_notif = 0, 0
+    if 'user_id' in session:
+        try:
+            from hinga.db import get_db
+            db = get_db()
+            unread_msg = db.execute("SELECT COUNT(*) FROM messages m JOIN conversations c "
+                                    "ON m.conversation_id=c.id WHERE (c.user_a=? OR c.user_b=?) "
+                                    "AND m.author_id!=? AND (m.read_at IS NULL OR m.read_at='')",
+                                    (session['user_id'], session['user_id'],
+                                     session['user_id'])).fetchone()[0]
+            unread_notif = db.execute("SELECT COUNT(*) FROM notifications WHERE user_id=? "
+                                      "AND (read_at IS NULL OR read_at='')",
+                                      (session['user_id'],)).fetchone()[0]
+        except Exception:
+            pass
     return dict(
         mois_nom=mois_nom, periode_label=periode_label,
         month_in_range=month_in_range, MOIS_FR=MOIS_FR, MOIS_FR_ABBR=MOIS_FR_ABBR,
+        unread_msg=unread_msg, unread_notif=unread_notif,
     )
 
 # Racine projet (static/, hinga.db vivent à côté du paquet)
@@ -47,11 +64,12 @@ limiter = Limiter(get_remote_address, app=app)
 from hinga.db import close_connection  # noqa: E402
 app.teardown_appcontext(close_connection)
 
-from hinga import auth, garden, admin, exchange  # noqa: E402
+from hinga import auth, garden, admin, exchange, social  # noqa: E402
 app.register_blueprint(auth.bp)
 app.register_blueprint(garden.bp)
 app.register_blueprint(admin.bp)
 app.register_blueprint(exchange.bp)
+app.register_blueprint(social.bp)
 
 
 @app.before_request

@@ -39,6 +39,22 @@ def audit(action, target_kind='', target_id=None, details=''):
     db.commit()
 
 
+def notify(user_id, kind, title, link=''):
+    """Notification interne (V2.3). Silencieuse si table absente."""
+    import sqlite3
+    from datetime import datetime
+
+    from hinga.db import get_db
+    db = get_db()
+    try:
+        db.execute('''INSERT INTO notifications (user_id, kind, title, link, created_at)
+                      VALUES (?,?,?,?,?)''',
+                   (user_id, kind, title, link or '', datetime.now().strftime('%Y-%m-%d %H:%M')))
+        db.commit()
+    except sqlite3.OperationalError:
+        pass
+
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
