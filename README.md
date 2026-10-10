@@ -148,3 +148,18 @@ docs/V2-architecture.md# audit + plan V2
 ```
 
 Licence : MIT (voir `LICENSE`). V2 : `docs/V2-proposition.md`.
+
+## 10. Documentation
+
+- `docs/RASPBERRY_PI.md` : installation maison, boîte de quartier hors-ligne, USB.
+- `docs/VPS.md` : rituel de déploiement, retour arrière, `.env`, logs.
+- `docs/GUIDE_ADMIN.md` : approbations, modération, catégories, impact, audit.
+- `docs/CHARTE.md` : charte de la communauté (acceptée à l'inscription).
+- `docs/V2-proposition.md` + `docs/V2-architecture.md` : vision et plan V2.
+
+Jeu de démonstration (jamais en production) :
+
+```bash
+python3 scripts/seed_demo.py --db /tmp/demo.db   # DEMO_marie / DEMO_paul (demo123456)
+python3 scripts/seed_demo.py --db /tmp/demo.db --remove
+```
