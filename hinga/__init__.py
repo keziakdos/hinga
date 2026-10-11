@@ -51,6 +51,9 @@ app.config['DATABASE'] = os.path.join(basedir, 'hinga.db')
 app.config['NGINX_ACCESS_LOG'] = os.environ.get(
     'NGINX_ACCESS_LOG', '/var/log/nginx/hinga.access.log')
 app.config['VISIT_MAX_LINES'] = int(os.environ.get('VISIT_MAX_LINES', '5000'))
+app.config['VPS_IP'] = os.environ.get('VPS_IP', '')
+app.config['GEOIP_DB'] = os.environ.get('GEOIP_DB', '')
+app.config['RETENTION_DAYS'] = int(os.environ.get('RETENTION_DAYS', '90'))
 
 # Sessions : HttpOnly + SameSite stricts ; Secure en prod (SESSION_COOKIE_SECURE=1).
 app.config['SESSION_COOKIE_HTTPONLY'] = True

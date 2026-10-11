@@ -1,0 +1,83 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6 pb-10">
+    <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-800">🧑‍🤝‍🧑 Visiteurs</h1>
+        <a href="{{ url_for('admin.admin_visits') }}" class="text-gray-600 underline text-sm">← Audience</a>
+    </div>
+
+    {% if missing %}
+    <p class="glass p-6 rounded-2xl text-center text-gray-600">Log introuvable : <b class="font-mono">{{ missing }}</b></p>
+    {% else %}
+    <div class="glass p-4 rounded-2xl">
+        <form method="GET" action="{{ url_for('admin.admin_visitors') }}" class="flex flex-wrap gap-2 items-center text-sm">
+            <select name="type" class="p-2 rounded-lg bg-white/50 border border-white/30 font-bold">
+                <option value="total" {% if data.type == 'total' %}selected{% endif %}>Tous</option>
+                <option value="humains" {% if data.type == 'humains' %}selected{% endif %}>Humains</option>
+                <option value="robots" {% if data.type == 'robots' %}selected{% endif %}>Robots</option>
+            </select>
+            <input type="text" name="q" value="{{ data.q }}" placeholder="IP, nom, pays…" class="p-2 rounded-lg bg-white/50 border border-white/30">
+            <select name="tri" class="p-2 rounded-lg bg-white/50 border border-white/30 font-bold">
+                <option value="requetes" {% if data.tri == 'requetes' %}selected{% endif %}>Nb requêtes</option>
+                <option value="derniere" {% if data.tri == 'derniere' %}selected{% endif %}>Dernière visite</option>
+                <option value="premiere" {% if data.tri == 'premiere' %}selected{% endif %}>Première visite</option>
+            </select>
+            <input type="hidden" name="periode" value="{{ data.periode }}">
+            <input type="hidden" name="du" value="{{ data.du }}">
+            <input type="hidden" name="au" value="{{ data.au }}">
+            <button class="px-3 py-2 rounded-lg bg-green-700 text-white font-bold text-sm">OK</button>
+            <a href="{{ url_for('admin.admin_visitors', type=data.type, q=data.q, tri=data.tri, periode=data.periode, du=data.du, au=data.au, export='csv') }}" class="px-3 py-2 rounded-lg bg-white/50 font-bold text-sm">Export CSV</a>
+        </form>
+        <p class="text-xs text-gray-500 mt-2">{{ data.total }} visiteur(s) (IP + navigateur). Visiteur unique = adresse IP + navigateur.</p>
+    </div>
+
+    <div class="glass rounded-2xl overflow-x-auto">
+        <table class="w-full text-left text-sm min-w-[760px]">
+            <thead class="text-xs uppercase text-gray-500 border-b border-gray-400/30">
+                <tr><th class="p-2">Visiteur</th><th class="p-2">Pays</th><th class="p-2">Appareil</th><th class="p-2">Première</th><th class="p-2">Dernière</th><th class="p-2 text-center">Pages</th><th class="p-2 text-center">Req.</th><th class="p-2"></th></tr>
+            </thead>
+            <tbody class="divide-y divide-gray-400/20">
+                {% for v in data.visitors %}
+                <tr class="hover:bg-white/30 align-top">
+                    <td class="p-2"><span class="font-mono font-bold">{{ v.ip }}</span><span class="block text-xs text-gray-500">{{ v.label }}{% if v.bot %} 🤖{% endif %}</span></td>
+                    <td class="p-2 whitespace-nowrap">{{ v.flag }} {{ v.country }}</td>
+                    <td class="p-2 text-xs">{{ v.device }}<span class="block text-gray-500">{{ v.browser }}</span></td>
+                    <td class="p-2 text-xs whitespace-nowrap">{{ v.first }}</td>
+                    <td class="p-2 text-xs whitespace-nowrap">{{ v.last }}</td>
+                    <td class="p-2 text-center">{{ v.pages }}</td>
+                    <td class="p-2 text-center">{{ v.n }}</td>
+                    <td class="p-2"><a href="{{ url_for('admin.admin_visitors', visiteur=v.ip + '|' + v.uah, type=data.type, q=data.q, tri=data.tri) }}" class="text-xs text-blue-700 underline">Détail</a></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="p-4 text-center text-gray-500 italic">Aucun visiteur.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="text-center text-sm text-gray-600">Page {{ data.page }} / {{ data.total_pages }}</p>
+
+    {% if data.detail %}
+    <div class="glass p-6 rounded-2xl border-t-4 border-blue-500 overflow-x-auto">
+        <h2 class="font-bold text-blue-900 mb-1">🔍 <span class="font-mono">{{ data.detail.visitor.ip }}</span> <span class="text-sm font-normal">({{ data.detail.visitor.label }} · {{ data.detail.visitor.flag }} {{ data.detail.visitor.country }} · {{ data.detail.visitor.browser }} / {{ data.detail.visitor.device }})</span></h2>
+        <p class="text-xs text-gray-500 mb-3">Référent principal : {{ data.detail.visitor.ref or 'Direct' }}</p>
+        <table class="w-full text-left text-sm min-w-[640px]">
+            <thead class="text-xs uppercase text-gray-500 border-b border-gray-400/30">
+                <tr><th class="p-2">Date/heure</th><th class="p-2">Action</th><th class="p-2">Page</th><th class="p-2">Résultat</th><th class="p-2">Détail</th></tr>
+            </thead>
+            <tbody class="divide-y divide-gray-400/20">
+                {% for h in data.detail.hits %}
+                <tr class="hover:bg-white/30 align-top">
+                    <td class="p-2 whitespace-nowrap text-gray-600">{{ h.when }}</td>
+                    <td class="p-2 whitespace-nowrap">{{ h.action }}</td>
+                    <td class="p-2">{{ h.page }}<span class="block font-mono text-xs text-gray-500 break-all">{{ h.path }}</span></td>
+                    <td class="p-2 whitespace-nowrap"><span class="text-xs px-2 py-0.5 rounded-full font-bold {{ h.badge }}">{{ h.code }}</span> <span class="text-xs text-gray-600">{{ h.phrase }}</span></td>
+                    <td class="p-2 text-xs text-gray-600">{{ h.browser }} · {{ h.device }}<span class="block">Réf : {{ h.referer }}</span><span class="block italic">{{ h.reason }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

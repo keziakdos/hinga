@@ -103,14 +103,23 @@ Adaptez `User`/`WorkingDirectory` à votre installation.
 Restauration : stoppez le service, recopiez `hinga.db` + `medias.tgz` (+ `.env` si besoin),
 redémarrez, vérifiez au `curl`.
 
-## 7. Visites : robots vs humains (V1)
+## 7. Visites : robots vs humains (admin + script)
+
+Page **Admin → Visites** : 5 KPI cliquables, sources, appareils, pays, IP suspectes,
+inspection détaillée (heure Brussels, action, page, résultat, navigateur, raison),
+renommage d'IP (✏️, exclusion possible), export CSV, détection cloud/datacenter
+(reverse DNS + `data/cloud_ranges.json`, modifiable) et pays via GeoIP locale.
 
 ```bash
-./scripts/analyse_visites.sh /var/log/nginx/hinga.access.log 30
-# => requêtes, part robots/humains, répartition par jour, top pages, top IP
+./scripts/analyse_visites.sh /var/log/nginx/hinga.access.log 7   # lecture seule
+./scripts/update_geoip.sh            # DB-IP Lite (sans compte) ; --geolite avec clé
+./scripts/purge_visits.sh 90         # purge RGPD des vieux logs (défaut 90 j)
 ```
 
-Lecture seule, sans dépendance. Un tableau de bord temps réel est prévu en V2.
+Mise à jour mensuelle conseillée : GeoIP (`cron` le 5) + vérification des plages CIDR
+(sources officielles : Cloudflare ips-v4, Google cloud.json, AWS ip-ranges.json,
+Azure ServiceTags). La base `data/*.mmdb` n'est jamais commitée.
+Variables : `NGINX_ACCESS_LOG`, `VISIT_MAX_LINES`, `VPS_IP`, `GEOIP_DB`, `RETENTION_DAYS`.
 
 ## 8. Sécurité
 
