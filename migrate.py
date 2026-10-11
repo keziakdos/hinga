@@ -234,6 +234,16 @@ def migrate(db_path: str) -> None:
             )"""
         )
 
+        # --- IP connues (audience V2 : labels, exclusion) ---
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS known_ips (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                cidr TEXT NOT NULL, label TEXT DEFAULT '',
+                categorie TEXT DEFAULT 'inconnu', note TEXT DEFAULT '',
+                exclude INTEGER DEFAULT 0, updated_at TEXT
+            )"""
+        )
+
         # --- tip_categories + tips.category_id ---
         conn.execute(
             """CREATE TABLE IF NOT EXISTS tip_categories (

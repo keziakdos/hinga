@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto pb-10">
+    <div class="glass p-8 rounded-3xl">
+        <h1 class="text-3xl font-bold text-green-900 mb-6">🔒 Vie privée</h1>
+        <div class="space-y-4 text-gray-800 leading-relaxed text-sm">
+            <p>Hinga est associatif, sans publicité et sans revente de données. Vos données
+            (profil, annonces, messages) servent uniquement au fonctionnement du site.</p>
+            <p><b>Statistiques de visite.</b> Nous mesurons l'audience à partir des journaux
+            techniques du serveur (pages vues, navigateur approximatif, pays estimé) :
+            jamais d'adresse exacte, jamais de revente, jamais de traceur publicitaire.
+            Les adresses IP détaillées sont purgées automatiquement après 90 jours ;
+            seules des statistiques agrégées (totaux par jour) sont conservées.
+            Vous pouvez demander l'export ou la suppression de vos données à un administrateur.</p>
+            <p><b>Vos droits (RGPD).</b> Accès, rectification, effacement : écrivez à un
+            administrateur via la messagerie du site.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -4,12 +4,17 @@
 <div class="max-w-6xl mx-auto space-y-6 pb-10">
     <div class="glass p-4 rounded-2xl flex flex-wrap gap-3 justify-between items-center">
         <h1 class="text-2xl font-bold text-green-900">📊 Statistiques d'Audience</h1>
-        <form method="GET" action="{{ url_for('admin.admin_visits') }}" class="flex gap-2 items-center text-sm">
-            <select name="periode" onchange="this.form.submit()" class="p-2 rounded-lg bg-white/50 border border-white/30 font-bold">
+        <form method="GET" action="{{ url_for('admin.admin_visits') }}" class="flex flex-wrap gap-2 items-center text-sm">
+            <select name="periode" class="p-2 rounded-lg bg-white/50 border border-white/30 font-bold">
                 <option value="1" {% if stats and stats.periode == 1 %}selected{% endif %}>Aujourd'hui</option>
                 <option value="7" {% if not stats or stats.periode == 7 %}selected{% endif %}>7 jours</option>
                 <option value="30" {% if stats and stats.periode == 30 %}selected{% endif %}>30 jours</option>
+                <option value="custom" {% if stats and stats.periode == 'custom' %}selected{% endif %}>Personnalisé</option>
             </select>
+            <input type="date" name="du" value="{{ stats.du if stats else '' }}" class="p-2 rounded-lg bg-white/50 border border-white/30">
+            <input type="date" name="au" value="{{ stats.au if stats else '' }}" class="p-2 rounded-lg bg-white/50 border border-white/30">
+            <label class="text-xs flex items-center gap-1"><input type="checkbox" name="exclure" value="0" {% if stats and not stats.exclure %}checked{% endif %}> inclure mes IP exclues</label>
+            <button class="px-3 py-2 rounded-lg bg-green-700 text-white font-bold text-sm">OK</button>
             <span class="px-3 py-2 rounded-lg bg-white/50 font-bold">📅 {{ stats.ref_day if stats else '—' }}</span>
         </form>
     </div>
@@ -22,20 +27,20 @@
         <b class="font-mono">nginx -t && systemctl reload nginx</b>.</p>
     </div>
     {% else %}
-    <p class="text-xs text-gray-500">Source : {{ stats.log_path }} ({{ stats.total }} requêtes analysées, lecture seule)</p>
+    <p class="text-xs text-gray-500">Source : {{ stats.log_path }} ({{ stats.total }} requêtes, lecture seule){% if stats.n_excluded %} · {{ stats.n_excluded }} requête(s) de vos IP exclues masquée(s){% endif %}</p>
 
     <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold text-gray-700">{{ stats.total }}</span><span class="text-xs uppercase text-gray-500 font-bold">Requêtes totales</span></div>
-        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold text-green-700">{{ stats.humans }}</span><span class="text-xs uppercase text-gray-500 font-bold">Humains (est.)</span></div>
-        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold text-blue-700">{{ stats.unique }}</span><span class="text-xs uppercase text-gray-500 font-bold">Visiteurs uniques</span></div>
-        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold text-orange-600">{{ stats.bots }}</span><span class="text-xs uppercase text-gray-500 font-bold">Robots</span></div>
-        <div class="glass p-4 rounded-2xl text-center"><span class="block text-3xl font-bold {% if stats.suspicious %}text-red-700{% else %}text-green-700{% endif %}">{{ stats.suspicious|length }}</span><span class="text-xs uppercase text-gray-500 font-bold">IP suspectes</span></div>
+        <a href="{{ url_for('admin.admin_visitors', type='total', periode=stats.periode if stats.periode != 'custom' else 7, du=stats.du, au=stats.au) }}" class="glass p-4 rounded-2xl text-center hover:bg-white/40 transition"><span class="block text-3xl font-bold text-gray-700">{{ stats.total }}</span><span class="text-xs uppercase text-gray-500 font-bold">Requêtes totales</span></a>
+        <a href="{{ url_for('admin.admin_visitors', type='humains', periode=stats.periode if stats.periode != 'custom' else 7, du=stats.du, au=stats.au) }}" class="glass p-4 rounded-2xl text-center hover:bg-white/40 transition"><span class="block text-3xl font-bold text-green-700">{{ stats.humans }}</span><span class="text-xs uppercase text-gray-500 font-bold">Humains (est.)</span></a>
+        <a href="{{ url_for('admin.admin_visitors', type='total', periode=stats.periode if stats.periode != 'custom' else 7, du=stats.du, au=stats.au) }}" class="glass p-4 rounded-2xl text-center hover:bg-white/40 transition"><span class="block text-3xl font-bold text-blue-700">{{ stats.unique }}</span><span class="text-xs uppercase text-gray-500 font-bold">Visiteurs uniques</span></a>
+        <a href="{{ url_for('admin.admin_visitors', type='robots', periode=stats.periode if stats.periode != 'custom' else 7, du=stats.du, au=stats.au) }}" class="glass p-4 rounded-2xl text-center hover:bg-white/40 transition"><span class="block text-3xl font-bold text-orange-600">{{ stats.bots }}</span><span class="text-xs uppercase text-gray-500 font-bold">Robots</span></a>
+        <a href="{{ url_for('admin.admin_visitors', type='total', periode=stats.periode if stats.periode != 'custom' else 7, du=stats.du, au=stats.au) }}" class="glass p-4 rounded-2xl text-center hover:bg-white/40 transition"><span class="block text-3xl font-bold {% if stats.suspicious %}text-red-700{% else %}text-green-700{% endif %}">{{ stats.suspicious|length }}</span><span class="text-xs uppercase text-gray-500 font-bold">IP suspectes</span></a>
     </div>
 
     <div class="grid md:grid-cols-3 gap-6">
-        <div class="glass p-6 rounded-2xl">
+        <div class="glass p-6 rounded-2xl overflow-x-auto">
             <h2 class="font-bold text-green-900 mb-3 text-center">📄 Pages vues (humains)</h2>
-            <ul class="text-sm space-y-1">
+            <ul class="text-sm space-y-1 min-w-[220px]">
                 {% for p, n in stats.top_pages %}
                 <li class="flex justify-between gap-2"><span class="font-mono truncate">{{ p }}</span><b>{{ n }}</b></li>
                 {% else %}
@@ -45,53 +50,79 @@
             <p class="text-xs text-gray-500 mt-2">Fichiers techniques (.css, .js…) exclus.</p>
         </div>
 
-        <div class="glass p-6 rounded-2xl">
+        <div class="glass p-6 rounded-2xl overflow-x-auto">
             <h2 class="font-bold text-green-900 mb-3 text-center">🧭 Sources de trafic</h2>
-            <ul class="text-sm space-y-1 mb-3">
+            <ul class="text-sm space-y-1 min-w-[220px]">
                 {% for s, n in stats.sources %}
-                <li class="flex justify-between"><span>{{ s }}</span><b>{{ n }}</b></li>
+                <li class="flex justify-between gap-2"><span class="truncate">{{ s }}</span><b>{{ n }}</b></li>
                 {% else %}
                 <li class="text-gray-500 italic">Aucune donnée.</li>
                 {% endfor %}
             </ul>
-            <div class="relative h-40"><canvas id="chartTrend"></canvas></div>
-            <p class="text-xs text-gray-500 mt-1 text-center">Tendance de la journée (humains / heure)</p>
+            <div class="relative h-40 mt-3 min-w-[220px]"><canvas id="chartTrend"></canvas></div>
+            <p class="text-xs text-gray-500 mt-1 text-center">Heures Europe/Brussels</p>
+            {% if stats.daily_labels|length > 1 %}
+            <div class="relative h-32 mt-2 min-w-[220px]"><canvas id="chartDaily"></canvas></div>
+            <p class="text-xs text-gray-500 mt-1 text-center">Par jour</p>
+            {% endif %}
+            {% if stats.daily_labels|length > 1 %}
+            <div class="relative h-32 mt-2 min-w-[220px]"><canvas id="chartDaily"></canvas></div>
+            <p class="text-xs text-gray-500 mt-1 text-center">Par jour</p>
+            {% endif %}
         </div>
 
-        <div class="glass p-6 rounded-2xl">
+        <div class="glass p-6 rounded-2xl overflow-x-auto">
             <h2 class="font-bold text-green-900 mb-3 text-center">🌐 Top adresses IP</h2>
-            <ul class="text-sm space-y-2">
+            <ul class="text-sm space-y-2 min-w-[240px]">
                 {% for e in stats.top_ips %}
                 <li class="flex justify-between items-center gap-1">
-                    <span class="font-mono truncate">{{ '🏠' if e.local else '🌍' }} {{ e.ip }}</span>
+                    <span class="font-mono truncate" title="{{ e.country }}">{{ e.flag }} {{ e.ip }}<span class="block text-xs text-gray-500 truncate">{{ e.label }}</span></span>
                     <span class="flex items-center gap-2 shrink-0"><b>{{ e.n }}{% if e.bot %} 🤖{% endif %}</b>
-                    <a href="{{ url_for('admin.admin_visits', ip=e.ip, periode=stats.periode) }}" class="text-xs text-blue-700 underline">Inspecter</a></span>
+                    <a href="{{ url_for('admin.admin_visits', ip=e.ip, periode=stats.periode if stats.periode != 'custom' else 7, du=stats.du, au=stats.au) }}" class="text-xs text-blue-700 underline">Inspecter</a></span>
                 </li>
                 {% endfor %}
             </ul>
-            <p class="text-xs text-gray-500 mt-2">🏠 = réseau local · 🌍 = internet (pays précis = base GeoIP, option future, pas de cloud).</p>
         </div>
     </div>
 
     {% if stats.inspect %}
-    <div class="glass p-6 rounded-2xl border-t-4 border-blue-500">
+    <div class="glass p-6 rounded-2xl border-t-4 border-blue-500 overflow-x-auto">
         <h2 class="font-bold text-blue-900 mb-1">🔍 Inspection : <span class="font-mono">{{ stats.inspect.ip }}</span></h2>
-        <p class="text-sm text-gray-600 mb-3">{{ stats.inspect.n }} requêtes · {{ stats.inspect.bad }} erreurs · {{ 'robot' if stats.inspect.bot else 'humain (est.)' }}</p>
+        <p class="text-sm text-gray-600 mb-3">{{ stats.inspect.label }} · {{ stats.inspect.n }} requêtes · {{ stats.inspect.bad }} erreurs</p>
         <div class="overflow-x-auto mb-3">
-            <table class="w-full text-left text-xs font-mono">
+            <table class="w-full text-left text-sm min-w-[640px]">
+                <thead class="text-xs uppercase text-gray-500 border-b border-gray-400/30">
+                    <tr><th class="p-2">Date/heure</th><th class="p-2">Action</th><th class="p-2">Page</th><th class="p-2">Résultat</th><th class="p-2">Détail</th></tr>
+                </thead>
                 <tbody class="divide-y divide-gray-400/20">
                     {% for h in stats.inspect.hits %}
-                    <tr class="hover:bg-white/30">
-                        <td class="p-1 text-gray-500 whitespace-nowrap">{{ h.time }}</td>
-                        <td class="p-1">{{ h.method }}</td>
-                        <td class="p-1 break-all">{{ h.path }}</td>
-                        <td class="p-1">{{ h.status }}</td>
+                    <tr class="hover:bg-white/30 align-top">
+                        <td class="p-2 whitespace-nowrap text-gray-600">{{ h.when }}</td>
+                        <td class="p-2 whitespace-nowrap">{{ h.action }}</td>
+                        <td class="p-2">{{ h.page }}<span class="block font-mono text-xs text-gray-500 break-all">{{ h.path }}</span></td>
+                        <td class="p-2 whitespace-nowrap"><span class="text-xs px-2 py-0.5 rounded-full font-bold {{ h.badge }}">{{ h.code }}</span> <span class="text-xs text-gray-600">{{ h.phrase }}</span></td>
+                        <td class="p-2 text-xs text-gray-600">{{ h.browser }} · {{ h.os_name }} · {{ h.device }}<span class="block">Réf : {{ h.referer }}</span><span class="block italic">{{ h.reason }}</span></td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        <details class="text-sm">
+        <form method="POST" action="{{ url_for('admin.admin_ip_rename') }}" class="flex flex-wrap gap-2 items-end text-sm bg-white/40 p-3 rounded-xl">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="ip" value="{{ stats.inspect.ip }}">
+            <label>Nom : <input type="text" name="label" value="{% if stats.inspect.label != stats.inspect.ip %}{{ stats.inspect.label }}{% endif %}" placeholder="Ex : Moi (maison)" class="p-1 rounded bg-white/60 border border-white/30"></label>
+            <label>Catégorie :
+                <select name="categorie" class="p-1 rounded bg-white/60 border border-white/30">
+                    {% for c in ['moi','vps','moteur','cloud','service','inconnu'] %}
+                    <option value="{{ c }}" {% if stats.inspect.cat == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <input type="text" name="note" placeholder="Note" class="p-1 rounded bg-white/60 border border-white/30">
+            <label class="text-xs flex items-center gap-1"><input type="checkbox" name="exclude" value="1"> Exclure des stats</label>
+            <button class="px-3 py-1 rounded-lg bg-blue-600 text-white font-bold">✏️ Nommer</button>
+        </form>
+        <details class="text-sm mt-3">
             <summary class="cursor-pointer font-bold text-red-700">⛔ Bloquer cette IP (commandes root à copier)</summary>
             <pre class="bg-gray-900 text-green-200 p-3 rounded-xl mt-2 overflow-x-auto text-xs">iptables -I INPUT -s {{ stats.inspect.ip }} -j DROP
 netfilter-persistent save   # persister (paquet iptables-persistent)
@@ -103,10 +134,10 @@ netfilter-persistent save   # persister (paquet iptables-persistent)
     {% endif %}
 
     {% if stats.suspicious %}
-    <div class="glass p-6 rounded-2xl border-t-4 border-red-500">
+    <div class="glass p-6 rounded-2xl border-t-4 border-red-500 overflow-x-auto">
         <h2 class="text-xl font-bold text-red-800 mb-3">🚨 Adresses suspectes</h2>
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
+            <table class="w-full text-left text-sm min-w-[560px]">
                 <thead class="text-xs uppercase text-gray-500 border-b border-gray-400/30">
                     <tr><th class="p-2">IP</th><th class="p-2 text-center">Requêtes</th><th class="p-2 text-center">Erreurs</th><th class="p-2">Pourquoi</th><th class="p-2"></th></tr>
                 </thead>
@@ -117,7 +148,7 @@ netfilter-persistent save   # persister (paquet iptables-persistent)
                         <td class="p-2 text-center">{{ s.n }}</td>
                         <td class="p-2 text-center">{{ s.bad }}</td>
                         <td class="p-2">{{ s.reasons|join(' · ') }}</td>
-                        <td class="p-2"><a href="{{ url_for('admin.admin_visits', ip=s.ip, periode=stats.periode) }}" class="text-xs text-blue-700 underline">Inspecter</a></td>
+                        <td class="p-2"><a href="{{ url_for('admin.admin_visits', ip=s.ip, periode=stats.periode if stats.periode != 'custom' else 7, du=stats.du, au=stats.au) }}" class="text-xs text-blue-700 underline">Inspecter</a></td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -126,34 +157,46 @@ netfilter-persistent save   # persister (paquet iptables-persistent)
     </div>
     {% endif %}
 
-    <div class="glass p-6 rounded-2xl">
-        <h2 class="font-bold text-green-900 mb-3 text-center">📱 Appareils (humains)</h2>
-        {% set tot = stats.devices.mobile + stats.devices.desktop %}
-        {% if tot %}
-        {% set pm = (100 * stats.devices.mobile / tot)|round|int %}
-        <div class="flex h-6 rounded-full overflow-hidden bg-gray-200">
-            <div style="width: {{ pm }}%" class="bg-green-600"></div>
-            <div style="width: {{ 100 - pm }}%" class="bg-blue-400"></div>
+    <div class="grid md:grid-cols-2 gap-6">
+        <div class="glass p-6 rounded-2xl">
+            <h2 class="font-bold text-green-900 mb-3 text-center">📱 Appareils (humains)</h2>
+            {% set tot = stats.devices.mobile + stats.devices.desktop %}
+            {% if tot %}
+            {% set pm = (100 * stats.devices.mobile / tot)|round|int %}
+            <div class="flex h-6 rounded-full overflow-hidden bg-gray-200">
+                <div style="width: {{ pm }}%" class="bg-green-600"></div>
+                <div style="width: {{ 100 - pm }}%" class="bg-blue-400"></div>
+            </div>
+            <p class="text-center text-sm mt-2">Mobile <b>{{ pm }}%</b> · Desktop <b>{{ 100 - pm }}%</b></p>
+            {% else %}
+            <p class="text-center text-gray-500 italic text-sm">Aucune donnée.</p>
+            {% endif %}
         </div>
-        <p class="text-center text-sm mt-2">Mobile <b>{{ pm }}%</b> · Desktop <b>{{ 100 - pm }}%</b></p>
-        {% else %}
-        <p class="text-center text-gray-500 italic text-sm">Aucune donnée.</p>
-        {% endif %}
+        <div class="glass p-6 rounded-2xl">
+            <h2 class="font-bold text-green-900 mb-3 text-center">🌍 Pays (humains)</h2>
+            <ul class="text-sm space-y-1">
+                {% for c, n in stats.countries %}
+                <li class="flex justify-between"><span>{{ c }}</span><b>{{ n }}</b></li>
+                {% else %}
+                <li class="text-gray-500 italic">Aucune donnée.</li>
+                {% endfor %}
+            </ul>
+        </div>
     </div>
 
     {% if stats.recent %}
-    <div class="glass p-6 rounded-2xl">
+    <div class="glass p-6 rounded-2xl overflow-x-auto">
         <h2 class="font-bold text-green-900 mb-3">🔍 Sondes récentes</h2>
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs font-mono">
+            <table class="w-full text-left text-xs font-mono min-w-[560px]">
                 <tbody class="divide-y divide-gray-400/20">
                     {% for e in stats.recent %}
                     <tr class="hover:bg-white/30">
-                        <td class="p-1 text-gray-500 whitespace-nowrap">{{ e.time }}</td>
+                        <td class="p-1 text-gray-500 whitespace-nowrap">{{ e.when }}</td>
                         <td class="p-1 font-bold">{{ e.ip }}</td>
-                        <td class="p-1">{{ e.method }}</td>
-                        <td class="p-1 break-all">{{ e.path }}</td>
-                        <td class="p-1">{{ e.status }}</td>
+                        <td class="p-1">{{ e.action }}</td>
+                        <td class="p-1 break-all">{{ e.page }}</td>
+                        <td class="p-1">{{ e.code }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -174,6 +217,17 @@ netfilter-persistent save   # persister (paquet iptables-persistent)
                 datasets: [{ data: {{ stats.trend_values | safe if stats else '[]' }}, backgroundColor: 'rgba(34, 197, 94, 0.6)' }]
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+    }
+    const ctxD = document.getElementById('chartDaily');
+    if (ctxD) {
+        new Chart(ctxD.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: {{ stats.daily_labels | safe if stats else '[]' }},
+                datasets: [{ data: {{ stats.daily_values | safe if stats else '[]' }}, borderColor: 'rgba(59, 130, 246, 1)', tension: 0.3 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
         });
     }
 </script>

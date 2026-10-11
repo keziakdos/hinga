@@ -763,98 +763,162 @@ def admin_announcement_delete(item_id):
     flash('Annonce supprimée.')
     return redirect(url_for('admin.admin_announcements'))
 
-# --- VISITES : HUMAINS / ROBOTS / TENTATIVES (V2, lecture logs nginx) ---
-import re as _re
-
-BOT_RE = _re.compile(r'bot|crawl|spider|slurp|mediapartners|baidu|yandex|sogou|exabot|facebot|'
-                     r'ia_archiver|gptbot|claudebot|ccbot|anthropic|semrush|ahrefs|mj12|dotbot|petal|'
-                     r'bytespider|python-requests|curl|wget|httpclient|axios|go-http|java/|libwww|'
-                     r'zgrab|masscan|nmap|shodan|censys', _re.I)
-PROBE_RE = _re.compile(r'/\.env|wp-admin|wp-login|phpmyadmin|\.git/|\.svn|xmlrpc\.php|shell\.php|'
-                       r'admin\.php|config\.php|\.bak$|\.sql$|console\.php', _re.I)
-ATTACK_RE = _re.compile(r'union\s+select|sleep\s*\(|benchmark\s*\(|\.\./|%2e%2e|etc/passwd|'
-                        r'<script|base64_decode|_query\[|GLOBALS\[', _re.I)
-COMBINED_RE = _re.compile(r'^(?P<ip>\S+) \S+ \S+ \[(?P<time>[^\]]+)\] "(?P<method>[A-Z]+) '
-                          r'(?P<path>\S+)[^"]*" (?P<status>\d{3}) (?P<size>\S+) "(?P<ref>[^"]*)" "(?P<ua>[^"]*)"')
-RES_RE = _re.compile(r'\.(css|js|mjs|woff2?|ttf|png|jpe?g|gif|svg|ico|map)(\?|$)', _re.I)
-MOB_RE = _re.compile(r'Mobile|Android|iPhone|iPad|iPod|Phone', _re.I)
-LOCAL_RE = _re.compile(r'^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)')
-
-
-def _log_day(time_str):
-    from datetime import datetime as _dt
-    try:
-        return _dt.strptime(time_str.split()[0], '%d/%b/%Y:%H:%M:%S').date()
-    except (ValueError, IndexError):
-        return None
-
-
-def _source(ref):
-    r = (ref or '').lower()
-    if not r or r == '-':
-        return 'Direct'
-    if any(d in r for d in ['google.', 'bing.com', 'duckduckgo', 'yahoo.', 'ecosia.', 'brave.com',
-                            'qwant.', 'mojeek.', 'startpage.', 'yandex.']):
-        return 'Recherche'
-    if any(d in r for d in ['facebook.', 'instagram.', 'twitter.', 'x.com', 'linkedin.', 'tiktok.',
-                            'pinterest.', 'reddit.', 'whatsapp', 'telegram.', 'youtube.']):
-        return 'Réseaux sociaux'
-    return 'Autres sites'
-
-
-def _parse_visits(path, max_lines):
-    entries = []
-    try:
-        with open(path, 'r', errors='replace') as fh:
-            lines = fh.readlines()[-max_lines:]
-    except OSError:
-        return None
-    for line in lines:
-        m = COMBINED_RE.match(line)
-        if not m:
-            continue
-        d = m.groupdict()
-        ua = d['ua'] or ''
-        path_only = d['path'].split('?')[0]
-        is_bot = bool(BOT_RE.search(ua))
-        probe = bool(PROBE_RE.search(d['path']))
-        attack = bool(ATTACK_RE.search(d['path']))
-        try:
-            status = int(d['status'])
-        except ValueError:
-            status = 0
-        entries.append(dict(ip=d['ip'], time=d['time'], method=d['method'], path=d['path'][:120],
-                            status=status, ua=ua[:120], ref=(d.get('ref') or '')[:160],
-                            bot=is_bot, probe=probe, attack=attack,
-                            bad=status in (400, 403, 404)))
-    return entries
+# --- VISITES : HUMAINS / ROBOTS / INTRUSIONS (V2, module hinga.visits) ---
+from hinga import visits as _visits  # noqa: E402
 
 
 @bp.route('/admin/visites')
 @login_required
 def admin_visits():
     if session.get('role') != 'admin': return redirect(url_for('garden.index'))
-    from datetime import timedelta
+    from datetime import date as _date
+    db = get_db()
     log_path = current_app.config.get('NGINX_ACCESS_LOG', '')
-    entries = _parse_visits(log_path, current_app.config.get('VISIT_MAX_LINES', 5000))
+    entries, missing = _load_visit_entries(db, log_path)
     if entries is None:
-        return render_template('admin/visits.html', missing=log_path, stats=None)
+        return render_template('admin/visits.html', missing=missing, stats=None)
+    filt = _filter_period(entries)
+    entries, periode, ref_label, du, au = filt['entries'], filt['periode'], filt['label'], filt['du'], filt['au']
+    exclure = request.args.get('exclure', '1') == '1'
+    excluded = _visits.excluded_ips(db)
+    n_excluded = 0
+    if exclure and excluded:
+        kept = []
+        for e in entries:
+            if _visits.is_excluded(e['ip'], excluded):
+                n_excluded += 1
+            else:
+                kept.append(e)
+        entries = kept
+    ip_info = _enrich_ips(db, {e['ip'] for e in entries})
+    for e in entries:
+        info = ip_info.get(e['ip'], {})
+        e['cat'] = info.get('categorie', 'inconnu')
+        e['label'] = info.get('label', e['ip'])
+        if e['cat'] in _visits.ROBOT_CATS:
+            e['bot'] = True
+    stats = _visit_stats(entries, ip_info)
+    inspect_ip = request.args.get('ip', '').strip()[:45]
+    inspect = None
+    if inspect_ip:
+        hits = [_enrich_hit(e, ip_info) for e in entries if e['ip'] == inspect_ip][-40:][::-1]
+        s = stats['by_ip'].get(inspect_ip, {'n': 0, 'bad': 0, 'bot': False})
+        info = ip_info.get(inspect_ip, {})
+        inspect = dict(ip=inspect_ip, n=s['n'], bad=s['bad'], bot=s['bot'], hits=hits,
+                       label=info.get('label', inspect_ip), cat=info.get('categorie', 'inconnu'))
+    import json as _json
+    stats.update(log_path=log_path, periode=periode, du=du, au=au, ref_day=ref_label,
+                 exclure=1 if exclure else 0, n_excluded=n_excluded,
+                 trend_labels=_json.dumps(stats['trend_labels']),
+                 trend_values=_json.dumps(stats['trend_values']),
+                 daily_labels=_json.dumps(stats['daily_labels']),
+                 daily_values=_json.dumps(stats['daily_values']),
+                 inspect=inspect)
+    return render_template('admin/visits.html', missing=None, stats=stats)
+
+
+def _load_visit_entries(db, log_path):
+    try:
+        with open(log_path, 'r', errors='replace') as fh:
+            lines = fh.readlines()[-current_app.config.get('VISIT_MAX_LINES', 5000):]
+    except OSError:
+        return None, log_path
+    entries = []
+    for line in lines:
+        m = _visits.COMBINED_RE.match(line)
+        if not m:
+            continue
+        d = m.groupdict()
+        ua = d['ua'] or ''
+        try:
+            status = int(d['status'])
+        except ValueError:
+            status = 0
+        entries.append(dict(ip=d['ip'], time=d['time'], method=d['method'], path=d['path'][:160],
+                            status=status, ua=ua[:160], ref=(d.get('ref') or '')[:200],
+                            bot=bool(_visits.BOT_RE.search(ua)),
+                            probe=bool(_visits.PROBE_RE.search(d['path'])),
+                            attack=bool(_visits.ATTACK_RE.search(d['path'])),
+                            bad=status in (400, 403, 404)))
+    return entries, ''
+
+
+def _filter_period(entries):
+    from datetime import datetime as _dt, timedelta
+    du = request.args.get('du', '').strip()[:10]
+    au = request.args.get('au', '').strip()[:10]
+    dated = [(e, _visits._log_day(e['time'])) for e in entries]
+    ref_day = max((d for _, d in dated if d), default=None)
+    if du or au:
+        try:
+            d1 = _dt.strptime(du, '%Y-%m-%d').date() if du else None
+            d2 = _dt.strptime(au, '%Y-%m-%d').date() if au else None
+        except ValueError:
+            d1, d2 = None, None
+        if d1 and d2 and d2 < d1:
+            d1, d2 = d2, d1
+        kept = [e for e, d in dated if d and (not d1 or d >= d1) and (not d2 or d <= d2)]
+        label = f"du {d1.strftime('%d/%m/%Y') if d1 else '…'} au {d2.strftime('%d/%m/%Y') if d2 else '…'}"
+        return dict(entries=kept, periode='custom', label=label,
+                    du=d1.strftime('%Y-%m-%d') if d1 else '', au=d2.strftime('%Y-%m-%d') if d2 else '')
     try:
         days = int(request.args.get('periode', '7'))
     except (TypeError, ValueError):
         days = 7
     if days not in (1, 7, 30):
         days = 7
-    dated = [(e, _log_day(e['time'])) for e in entries]
-    ref_day = max((d for _, d in dated if d), default=None)
     if ref_day:
-        entries = [e for e, d in dated if d and d >= ref_day - timedelta(days=days - 1)]
+        kept = [e for e, d in dated if d and d >= ref_day - timedelta(days=days - 1)]
+        label = ref_day.strftime('%d/%m/%Y')
     else:
-        ref_day = None
-    inspect_ip = request.args.get('ip', '').strip()[:45]
+        kept, label = [], '—'
+    return dict(entries=kept, periode=days, label=label, du='', au='')
+
+
+def _enrich_ips(db, ips):
+    info = {}
+    vps_ip = current_app.config.get('VPS_IP', '')
+    budget = [25]
+    for ip in ips:
+        label, cat, src, host = _visits.resolve_ip(ip, db, vps_ip, budget[0])
+        if host:
+            budget[0] = max(0, budget[0] - 1)
+        flag, country, iso = _visits.geo_lookup(ip)
+        info[ip] = dict(label=label, categorie=cat, source=src, host=host,
+                        flag=flag, country=country, iso=iso)
+    return info
+
+
+def _enrich_hit(e, ip_info):
+    from datetime import datetime as _dt, timezone as _tz
+    try:
+        dt = _dt.strptime(e['time'].split()[0], '%d/%b/%Y:%H:%M:%S').replace(tzinfo=_tz.utc)
+        when = _visits._brussels(dt).strftime('%d/%m %H:%M')
+    except (ValueError, IndexError):
+        when = e['time']
+    code, badge, phrase = _visits.status_info(e['status'])
+    browser, os_name, device = _visits.parse_ua(e['ua'])
+    info = ip_info.get(e['ip'], {})
+    if e['bot']:
+        reason = 'User-Agent de bot'
+    elif info.get('categorie') in _visits.ROBOT_CATS:
+        reason = f"IP {info.get('categorie')} ({info.get('label')})"
+    elif e['probe'] or e['attack']:
+        reason = 'comportement suspect'
+    else:
+        reason = 'comportement humain'
+    return dict(e, when=when,
+                action='Consultation' if e['method'] == 'GET' else
+                       ('Envoi de formulaire' if e['method'] == 'POST' else e['method']),
+                page=_visits.page_name(e['path']), code=code, badge=badge, phrase=phrase,
+                browser=browser, os_name=os_name, device=device,
+                referer=_visits.ref_label(e['ref']), reason=reason)
+
+
+def _visit_stats(entries, ip_info):
+    from datetime import timedelta
     humans = [e for e in entries if not e['bot']]
     bots = [e for e in entries if e['bot']]
-    unique_visitors = len({e['ip'] for e in humans})
     by_ip = {}
     for e in entries:
         s = by_ip.setdefault(e['ip'], {'n': 0, 'bad': 0, 'bot': False, 'probe': False, 'attack': False})
@@ -880,46 +944,179 @@ def admin_visits():
     pages = {}
     for e in humans:
         p = e['path'].split('?')[0]
-        if p.startswith('/static/') or RES_RE.search(p):
+        if p.startswith('/static/') or _visits.RES_RE.search(p):
             continue
         if p == '/':
             p = '/ (Accueil)'
         pages[p] = pages.get(p, 0) + 1
     sources = {}
     for e in humans:
-        s = _source(e['ref'])
+        s = _visits.ref_label(e['ref'])
         sources[s] = sources.get(s, 0) + 1
-    mobile = sum(1 for e in humans if MOB_RE.search(e['ua']))
+    mobile = sum(1 for e in humans if _visits.MOB_RE.search(e['ua']))
     devices = dict(mobile=mobile, desktop=len(humans) - mobile)
-    trend_labels, trend_values = [], []
-    if ref_day:
-        per_hour = [0] * 24
-        for e in humans:
-            try:
-                h = int(e['time'].split(':')[1])
-                if 0 <= h <= 23:
-                    per_hour[h] += 1
-            except (ValueError, IndexError):
-                continue
-        trend_labels = [f"{h:02d}h" for h in range(24)]
-        trend_values = per_hour
+    per_hour = [0] * 24
+    for e in humans:
+        try:
+            h = int(e['time'].split(':')[1])
+            if 0 <= h <= 23:
+                per_hour[h] += 1
+        except (ValueError, IndexError):
+            continue
+    by_day = {}
+    for e in humans:
+        d = _visits._log_day(e['time'])
+        if d:
+            by_day[d.strftime('%d/%m')] = by_day.get(d.strftime('%d/%m'), 0) + 1
     top_ips = []
     for ip, s in sorted(by_ip.items(), key=lambda x: -x[1]['n'])[:15]:
-        top_ips.append(dict(ip=ip, n=s['n'], bot=s['bot'],
-                            local=bool(LOCAL_RE.match(ip))))
-    inspect = None
-    if inspect_ip:
-        hits = [e for e in entries if e['ip'] == inspect_ip][-30:][::-1]
-        s = by_ip.get(inspect_ip, {'n': 0, 'bad': 0, 'bot': False})
-        inspect = dict(ip=inspect_ip, n=s['n'], bad=s['bad'], bot=s['bot'], hits=hits)
-    import json as _json
-    stats = dict(total=len(entries), humans=len(humans), bots=len(bots),
-                 unique=unique_visitors, ips=len(by_ip), suspicious=suspicious[:50],
-                 top_pages=sorted(pages.items(), key=lambda x: -x[1])[:15],
-                 sources=sorted(sources.items(), key=lambda x: -x[1]),
-                 devices=devices, top_ips=top_ips, inspect=inspect,
-                 recent=[e for e in entries if e['probe'] or e['attack']][-30:][::-1],
-                 log_path=log_path, periode=days,
-                 ref_day=ref_day.strftime('%d/%m/%Y') if ref_day else '—',
-                 trend_labels=_json.dumps(trend_labels), trend_values=_json.dumps(trend_values))
-    return render_template('admin/visits.html', missing=None, stats=stats)
+        info = ip_info.get(ip, {})
+        top_ips.append(dict(ip=ip, n=s['n'], bot=s['bot'], label=info.get('label', ip),
+                            flag=info.get('flag', '🌍'), country=info.get('country', 'Inconnu')))
+    countries = {}
+    for e in humans:
+        c = ip_info.get(e['ip'], {}).get('country', 'Inconnu')
+        countries[c] = countries.get(c, 0) + 1
+    return dict(total=len(entries), humans=len(humans), bots=len(bots),
+                unique=len({_visits.ua_hash(e['ua']) + e['ip'] for e in humans}),
+                ips=len(by_ip), suspicious=suspicious[:50],
+                top_pages=sorted(pages.items(), key=lambda x: -x[1])[:15],
+                sources=sorted(sources.items(), key=lambda x: -x[1])[:10],
+                devices=devices, top_ips=top_ips, by_ip=by_ip,
+                countries=sorted(countries.items(), key=lambda x: -x[1])[:10],
+                recent=[_enrich_hit(e, ip_info) for e in entries if e['probe'] or e['attack']][-30:][::-1],
+                trend_labels=[f"{h:02d}h" for h in range(24)], trend_values=per_hour,
+                daily_labels=list(by_day.keys()), daily_values=list(by_day.values()))
+
+
+@bp.route('/admin/visites/visiteurs')
+@login_required
+def admin_visitors():
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    db = get_db()
+    log_path = current_app.config.get('NGINX_ACCESS_LOG', '')
+    entries, missing = _load_visit_entries(db, log_path)
+    if entries is None:
+        return render_template('admin/visitors.html', missing=missing, data=None)
+    filt = _filter_period(entries)
+    entries = filt['entries']
+    if request.args.get('exclure', '1') == '1':
+        excluded = _visits.excluded_ips(db)
+        if excluded:
+            entries = [e for e in entries if not _visits.is_excluded(e['ip'], excluded)]
+    ip_info = _enrich_ips(db, {e['ip'] for e in entries})
+    for e in entries:
+        e['cat'] = ip_info.get(e['ip'], {}).get('categorie', 'inconnu')
+        if e['cat'] in _visits.ROBOT_CATS:
+            e['bot'] = True
+    vtype = request.args.get('type', 'total')
+    if vtype == 'humains':
+        entries = [e for e in entries if not e['bot']]
+    elif vtype == 'robots':
+        entries = [e for e in entries if e['bot']]
+    groups = {}
+    for e in entries:
+        key = e['ip'] + '|' + _visits.ua_hash(e['ua'])
+        g = groups.setdefault(key, {'ip': e['ip'], 'uah': _visits.ua_hash(e['ua']), 'n': 0,
+                                    'pages': 0, 'first': e['time'], 'last': e['time'],
+                                    'browser': '', 'os': '', 'device': '', 'ref': '', 'tops': {}})
+        g['n'] += 1
+        if e['time'] < g['first']:
+            g['first'] = e['time']
+        if e['time'] > g['last']:
+            g['last'] = e['time']
+        p = e['path'].split('?')[0]
+        if e['method'] == 'GET' and e['status'] == 200 and not p.startswith('/static/') \
+                and not _visits.RES_RE.search(p):
+            g['pages'] += 1
+        g['tops'][_visits.page_name(e['path'])] = g['tops'].get(_visits.page_name(e['path']), 0) + 1
+        if not g['ref'] and e['ref'] not in ('', '-'):
+            g['ref'] = e['ref']
+    visitors = []
+    for key, g in groups.items():
+        browser, os_name, device = _visits.parse_ua(next(
+            (e['ua'] for e in entries if e['ip'] == g['ip']), ''))
+        info = ip_info.get(g['ip'], {})
+        visitors.append(dict(g, label=info.get('label', g['ip']),
+                             cat=info.get('categorie', 'inconnu'),
+                             flag=info.get('flag', '🌍'), country=info.get('country', 'Inconnu'),
+                             browser=browser, os_name=os_name, device=device,
+                             bot=any(e['bot'] for e in entries if e['ip'] == g['ip']),
+                             top3=sorted(g['tops'].items(), key=lambda x: -x[1])[:3]))
+    q = request.args.get('q', '').strip().lower()[:60]
+    if q:
+        visitors = [v for v in visitors
+                    if q in v['ip'].lower() or q in (v['label'] or '').lower()
+                    or q in (v['country'] or '').lower()]
+    tri = request.args.get('tri', 'requetes')
+    visitors.sort(key=lambda v: (v['n'] if tri == 'requetes'
+                                 else v['last'] if tri == 'derniere' else v['first']),
+                  reverse=(tri != 'premiere'))
+    if request.args.get('export') == 'csv':
+        import csv as _csv
+        import io as _io
+        buf = _io.StringIO()
+        w = _csv.writer(buf, delimiter=';')
+        w.writerow(['ip', 'label', 'categorie', 'pays', 'navigateur', 'appareil',
+                    'premiere_visite', 'derniere_visite', 'pages_vues', 'requetes', 'referer'])
+        for v in visitors[:5000]:
+            w.writerow([v['ip'], v['label'], v['cat'], v['country'], v['browser'], v['device'],
+                        v['first'], v['last'], v['pages'], v['n'], v['ref']])
+        resp = current_app.response_class(buf.getvalue(), mimetype='text/csv; charset=utf-8')
+        resp.headers['Content-Disposition'] = 'attachment; filename=visiteurs.csv'
+        return resp
+    try:
+        page = max(1, int(request.args.get('page', '1')))
+    except (TypeError, ValueError):
+        page = 1
+    per_page = 20
+    total_pages = max(1, (len(visitors) + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    detail = None
+    vkey = request.args.get('visiteur', '')
+    if vkey:
+        match = next((v for v in visitors if v['ip'] + '|' + v['uah'] == vkey), None)
+        if match:
+            hits = [_enrich_hit(e, ip_info) for e in entries
+                    if e['ip'] == match['ip'] and _visits.ua_hash(e['ua']) == match['uah']]
+            detail = dict(visitor=match, hits=hits[::-1][:200])
+    return render_template('admin/visitors.html', missing=None,
+                           data=dict(visitors=visitors[(page - 1) * per_page:page * per_page],
+                                     total=len(visitors), page=page, total_pages=total_pages,
+                                     type=vtype, q=request.args.get('q', ''), tri=tri,
+                                     periode=request.args.get('periode', '7'),
+                                     du=request.args.get('du', ''), au=request.args.get('au', ''),
+                                     detail=detail))
+
+
+@bp.route('/admin/visites/ip', methods=['POST'])
+@login_required
+def admin_ip_rename():
+    if session.get('role') != 'admin': return redirect(url_for('garden.index'))
+    from datetime import datetime as _dt
+    db = get_db()
+    ip = request.form.get('ip', '').strip()[:80]
+    if not ip:
+        return redirect(url_for('admin.admin_visits'))
+    if request.form.get('supprimer'):
+        db.execute('DELETE FROM known_ips WHERE cidr=?', (ip,))
+        db.commit()
+        flash('Label supprimé (retour à la détection auto).')
+        return redirect(url_for('admin.admin_visits', ip=ip))
+    label = request.form.get('label', '').strip()[:80] or ip
+    cat = request.form.get('categorie', 'inconnu')
+    if cat not in _visits.CATEGORIES:
+        cat = 'inconnu'
+    note = request.form.get('note', '').strip()[:300]
+    exclude = 1 if request.form.get('exclude') else 0
+    row = db.execute('SELECT id FROM known_ips WHERE cidr=?', (ip,)).fetchone()
+    if row:
+        db.execute("UPDATE known_ips SET label=?, categorie=?, note=?, exclude=?, updated_at=? WHERE id=?",
+                   (label, cat, note, exclude, _dt.now().strftime('%Y-%m-%d'), row['id']))
+    else:
+        db.execute("INSERT INTO known_ips (cidr, label, categorie, note, exclude, updated_at) "
+                   "VALUES (?,?,?,?,?,?)",
+                   (ip, label, cat, note, exclude, _dt.now().strftime('%Y-%m-%d')))
+    db.commit()
+    flash(f"IP {ip} nommée « {label} ».")
+    return redirect(url_for('admin.admin_visits', ip=ip))

@@ -104,6 +104,11 @@ def offline():
     return render_template('offline.html')
 
 
+@bp.route('/confidentialite')
+def privacy():
+    return render_template('privacy.html')
+
+
 # --- ROUTES PRIVÉES (Récoltes, Stats, Ma Plante) ---
 
 @bp.route('/harvests', methods=['GET', 'POST'])
